@@ -1,1 +1,376 @@
-빠진칸 — 준비 중
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>빠진칸 — 공고 제출요건 누락 대조</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;max-width:880px;margin:24px auto;padding:0 16px;color:#111;line-height:1.6}
+h1{font-size:18px;margin:0 0 8px}
+textarea{width:100%;min-height:140px;font-family:inherit;font-size:14px;border:1px solid #888;border-radius:6px;padding:10px}
+button{margin-top:8px;background:#2563eb;color:#fff;border:1px solid #2563eb;border-radius:6px;padding:8px 14px;cursor:pointer}
+button:hover{background:#1d4ed8}
+.note{color:#555;font-size:13px;margin:6px 0}
+.result{border:1px solid #888;border-radius:6px;padding:12px;margin-top:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border:1px solid #d0d0d0;padding:6px 8px;text-align:left;vertical-align:top}
+th{background:#f3f4f6}
+.tag{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px}
+.tag.cond{background:#fde68a;color:#7c2d12}
+.tag.missing{background:#fecaca;color:#7f1d1d}
+.tag.fmt{background:#fef08a;color:#713f1b}
+.tag.cannot{background:#dbeafe;color:#1e3a8a}
+.tag.ok{background:#dcfce7;color:#14532d}
+p{margin:6px 0}
+.small{color:#555;font-size:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.hint{margin:10px 0 0;color:#333;font-size:13px}
+.warn{background:#fbeaea;border:1px solid #b71c1c;border-radius:6px;padding:8px;margin-top:10px;color:#7f1d1d;font-size:13px}
+.footer{margin-top:18px;color:#555;font-size:12px;border-top:1px solid #e5e7eb;padding-top:10px}
+</style>
+</head>
+<body>
+<h1>빠진칸 — 공고 제출요건 누락 대조</h1>
+
+<textarea id="text" placeholder="준비 중인 공고문을 통째로 붙여넣으세요."></textarea>
+<button type="button" id="runBtn">대조하기</button>
+<button type="button" id="sampleBtn">예시 공고로 해보기</button>
+<p class="note">공고문과 내 서류를 대조해 빠진 것만 찾습니다. 자격 판정은 하지 않습니다.</p>
+
+<div id="docBox" style="display:none">
+<h2>내 서류함</h2>
+<p class="small">서류명과 발급일만 저장합니다. 파일·주민번호·사업자번호·계좌번호는 받지 않습니다. 서버에는 저장하지 않습니다.</p>
+<div id="docList"></div>
+<button type="button" id="docAddBtn">서류 추가</button>
+<button type="button" id="docResetBtn" style="color:#b91c1c;border-color:#b91c1c;background:#fff">서류함 전체 초기화</button>
+</div>
+
+<div id="notice" style="display:none"></div>
+
+<div id="resultBox" style="display:none">
+<p class="small" id="resultSummary"></p>
+<div class="result">
+<table id="resultTable">
+<thead>
+<tr><th>#</th><th>요건</th><th>공고 원문 근거</th><th>보유</th><th>상태</th><th>확인 질문</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+<div id="resultAction" class="hint"></div>
+<p class="small" id="resultDisclaimer"></p>
+<button type="button" id="copyBtn">결과 복사</button>
+</div>
+
+<div class="footer">
+이 결과는 공고 원문 대조 결과이며 자격 판정이 아닙니다. 최종 확인은 주관기관 공고와 담당 부서를 따르십시오.
+</div>
+
+<script>
+(function(){
+  const SAMPLE_NOTICE = `2026년 청년 창업 도약 지원사업 모집 공고
+
+1. 지원 대상: 공고일 기준 만 19세 이상 39세 이하, 사업자등록 3년 이내 창업자
+
+2. 제출 서류
+  가. 지원신청서(별지 제1호 서식) 1부
+  나. 사업자등록증명원 사본 1부 (발급일로부터 3개월 이내의 것)
+  다. 대표자 신분증 사본 1부
+  라. 최근 연도 부가가치세 과세표준증명원 1부
+  마. 4대보험 가입자명부 1부. 다만 대표자 1인 기업은 제출을 생략할 수 있다.
+  바. 가점 대상자는 해당 증빙(장애인기업확인서, 여성기업확인서 등)을 함께 제출한다.
+  사. 심사 과정에서 필요시 추가 서류를 요청할 수 있다.
+
+3. 접수 기한: 2026년 9월 15일(화) 18:00까지 온라인 접수`;
+
+  const $ = (s)=>document.querySelector(s);
+  const textEl = $("#text");
+  const runBtn = $("#runBtn");
+  const sampleBtn = $("#sampleBtn");
+  const docBox = $("#docBox");
+  const docList = $("#docList");
+  const docAddBtn = $("#docAddBtn");
+  const docResetBtn = $("#docResetBtn");
+  const noticeEl = $("#notice");
+  const resultBox = $("#resultBox");
+  const resultSummary = $("#resultSummary");
+  const resultTable = $("#resultTable");
+  const resultAction = $("#resultAction");
+  const resultDisclaimer = $("#resultDisclaimer");
+  const copyBtn = $("#copyBtn");
+
+  const STORAGE_KEY_DOCS = "mfc_docs_v1";
+
+  function readDocs(){
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY_DOCS) || "[]"); } catch(e){ return []; }
+  }
+  function writeDocs(docs){ try { localStorage.setItem(STORAGE_KEY_DOCS, JSON.stringify(docs)); } catch(e){} }
+
+  function renderDocList(docs){
+    docList.innerHTML = "";
+    if(!docs.length){
+      docBox.style.display = "block";
+      docList.innerHTML = "<p class='small'>아직 등록한 서류가 없습니다. 대조 결과에서 ‘가지고 있음’을 눌러 서류함을 채울 수 있습니다.</p>";
+      return;
+    }
+    docBox.style.display = "block";
+    docList.innerHTML = `<p class='small'>내 서류함 (${docs.length}건)</p>`;
+    for(const d of docs){
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap";
+      const nameEl = document.createElement("div");
+      nameEl.textContent = d.name;
+      nameEl.style.fontWeight = "600";
+      const issuedEl = document.createElement("div");
+      issuedEl.textContent = d.issued ? `발급일: ${d.issued}` : "발급일 없음";
+      issuedEl.className = "small";
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "삭제";
+      delBtn.type = "button";
+      delBtn.style.cssText = "background:#fff;color:#b91c1c;border:1px solid #b91c1c;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px";
+      delBtn.addEventListener("click", ()=>{
+        const next = readDocs().filter(x=>x!==d);
+        writeDocs(next);
+        renderDocList(next);
+      });
+      row.appendChild(nameEl);
+      row.appendChild(issuedEl);
+      row.appendChild(delBtn);
+      docList.appendChild(row);
+    }
+  }
+
+  docAddBtn.addEventListener("click", ()=>{
+    const name = prompt("서류명:");
+    if(!name || !name.trim()) return;
+    const issued = prompt("발급일 (선택, YYYY-MM-DD):", "");
+    const docs = readDocs();
+    docs.push({ name: name.trim(), issued: issued && issued.trim() ? issued.trim() : null });
+    writeDocs(docs);
+    renderDocList(docs);
+  });
+
+  docResetBtn.addEventListener("click", ()=>{
+    if(!confirm("서류함 전체를 초기화하시겠습니까?")) return;
+    writeDocs([]);
+    renderDocList([]);
+  });
+
+  function statusClass(s){
+    if(s==="미충족") return "missing";
+    if(s==="형식확인") return "fmt";
+    if(s==="판단불가") return "cannot";
+    if(s==="충족") return "ok";
+    return "";
+  }
+
+  function showNotice(msg){
+    noticeEl.textContent = msg;
+    noticeEl.style.display = "block";
+    noticeEl.className = "warn";
+  }
+
+  function runWithText(text, docs){
+    if(!text.trim()){ showNotice("공고문을 붙여넣어 주세요."); return; }
+    runBtn.disabled = true;
+    resultBox.style.display = "none";
+    noticeEl.style.display = "none";
+    fetch("/api/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, owned: docs })
+    })
+      .then(r=>r.json())
+      .then(data=>{
+        runBtn.disabled = false;
+        if(data.error || data.detail){
+          showNotice(data.error + " " + (data.detail||""));
+          return;
+        }
+        if(data.notice){
+          showNotice(data.notice);
+          resultBox.style.display = "none";
+          return;
+        }
+        renderResult(data);
+      })
+      .catch(err=>{
+        runBtn.disabled = false;
+        showNotice("대조 결과를 가져올 수 없습니다. 다시 시도해 주세요.");
+      });
+  }
+
+  function renderResult(data){
+    resultBox.style.display = "block";
+    resultSummary.textContent = data.summary || "";
+    const tbody = resultTable.querySelector("tbody");
+    tbody.innerHTML = "";
+    if(!data.rows || !data.rows.length){
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 6;
+      td.textContent = data.notice || "";
+      td.style.padding = "10px";
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      resultAction.textContent = "지금 준비할 서류: 없음 / 지금 확인할 질문: 없음 / 마감일: 없음";
+      resultDisclaimer.textContent = data.disclaimer || "";
+      return;
+    }
+    for(let i=0;i<data.rows.length;i++){
+      const r = data.rows[i];
+      const tr = document.createElement("tr");
+      const tdNo = document.createElement("td");
+      tdNo.textContent = (i+1);
+      const tdName = document.createElement("td");
+      if(r.conditional){
+        const tag = document.createElement("span");
+        tag.className = "tag cond";
+        tag.textContent = "[조건부] ";
+        tdName.appendChild(tag);
+      }
+      tdName.appendChild(document.createTextNode(r.name));
+      const tdEvidence = document.createElement("td");
+      tdEvidence.textContent = r.evidence || "";
+      const tdOwned = document.createElement("td");
+      tdOwned.textContent = r.matched_owned || "(없음)";
+      const tdStatus = document.createElement("td");
+      const tag = document.createElement("span");
+      tag.className = "tag " + statusClass(r.status);
+      tag.textContent = r.status;
+      tdStatus.appendChild(tag);
+      const tdQuestion = document.createElement("td");
+      tdQuestion.textContent = r.question || "—";
+      if(!r.question){
+        const hint = document.createElement("div");
+        hint.className = "small";
+        hint.textContent = "접수 기한을 제출하셨나요?";
+        tdQuestion.appendChild(hint);
+      }
+
+      if(["미충족","형식확인","충족"].includes(r.status)){
+        const haveBtn = document.createElement("button");
+        haveBtn.textContent = "가지고 있음";
+        haveBtn.type = "button";
+        haveBtn.style.cssText = "background:#2563eb;color:#fff;border:1px solid #2563eb;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;margin-top:6px";
+        haveBtn.addEventListener("click", ()=>{
+          const docs = readDocs();
+          if(!docs.some(x=>x.name===r.name)){
+            const issued = prompt("발급일 (선택, YYYY-MM-DD):", "");
+            docs.push({ name: r.name, issued: issued && issued.trim() ? issued.trim() : null });
+            writeDocs(docs);
+            renderDocList(docs);
+          }
+          runWithText(textEl.value, readDocs());
+        });
+        const issuedRow = document.createElement("div");
+        issuedRow.style.cssText = "margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap";
+        const issuedLabel = document.createElement("label");
+        issuedLabel.textContent = "발급일 ";
+        const issuedInput = document.createElement("input");
+        issuedInput.type = "text";
+        issuedInput.placeholder = "YYYY-MM-DD";
+        issuedInput.style.cssText = "border:1px solid #888;border-radius:4px;padding:2px 6px;font-size:12px";
+        issuedInput.maxLength = 10;
+        const setIssuedBtn = document.createElement("button");
+        setIssuedBtn.textContent = "설정";
+        setIssuedBtn.type = "button";
+        setIssuedBtn.style.cssText = "background:#1d4ed8;color:#fff;border:1px solid #1d4ed8;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:12px";
+        setIssuedBtn.addEventListener("click", ()=>{
+          const docs = readDocs();
+          const item = docs.find(x=>x.name===r.name);
+          if(item){
+            item.issued = issuedInput.value.trim() || null;
+            writeDocs(docs);
+            renderDocList(docs);
+          }
+          runWithText(textEl.value, readDocs());
+        });
+        issuedRow.appendChild(issuedLabel);
+        issuedRow.appendChild(issuedInput);
+        issuedRow.appendChild(setIssuedBtn);
+        tdOwned.appendChild(document.createElement("br"));
+        tdOwned.appendChild(issuedRow);
+      }
+
+      tr.appendChild(tdNo);
+      tr.appendChild(tdName);
+      tr.appendChild(tdEvidence);
+      tr.appendChild(tdOwned);
+      tr.appendChild(tdStatus);
+      tr.appendChild(tdQuestion);
+      tbody.appendChild(tr);
+    }
+    const action = data.actionLines || {};
+    const prepare = Array.isArray(action.prepare) ? action.prepare.join(" · ") : (action.prepare || "없음");
+    const check = Array.isArray(action.check) ? action.check.join(" · ") : (action.check || "없음");
+    const deadline = action.deadline || "없음";
+    resultAction.textContent = "지금 준비할 서류: " + prepare + " / 지금 확인할 질문: " + check + " / 마감일: " + deadline;
+    resultDisclaimer.textContent = data.disclaimer || "";
+  }
+
+  runBtn.addEventListener("click", ()=>{
+    runWithText(textEl.value, readDocs());
+  });
+
+  sampleBtn.addEventListener("click", ()=>{
+    textEl.value = SAMPLE_NOTICE;
+    runWithText(SAMPLE_NOTICE, readDocs());
+  });
+
+  copyBtn.addEventListener("click", ()=>{
+    const summary = resultSummary.textContent;
+    const rows = Array.from(resultTable.querySelectorAll("tbody tr")).map(tr=>{
+      const cells = Array.from(tr.querySelectorAll("td")).map(td=>td.textContent);
+      return cells.join(" | ");
+    });
+    const header = "대조 결과";
+    const prepareMatch = resultAction.textContent.match(/지금 준비할 서류: (.+?) \/ 지금 확인할 질문/);
+    const checkMatch = resultAction.textContent.match(/지금 확인할 질문: (.+) \/ 마감일/);
+    const deadlineMatch = resultAction.textContent.match(/마감일: (.+)$/);
+    const lines = [
+      header,
+      summary,
+      "",
+      "요건 | 공고 원문 근거 | 보유 | 상태 | 확인 질문",
+    ].concat(rows).concat([
+      "",
+      "지금 준비할 서류: " + (prepareMatch ? prepareMatch[1] : ""),
+      "지금 확인할 질문: " + (checkMatch ? checkMatch[1] : ""),
+      "마감일: " + (deadlineMatch ? deadlineMatch[1] : ""),
+      "",
+      resultDisclaimer.textContent
+    ]);
+    const copyText = lines.join("\n");
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(copyText).then(()=>{
+        copyBtn.textContent = "복사됨";
+        setTimeout(()=>{ copyBtn.textContent = "결과 복사"; }, 1500);
+      }).catch(()=>{ fallbackCopy(copyText); });
+    } else {
+      fallbackCopy(copyText);
+    }
+  });
+
+  function fallbackCopy(text){
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      copyBtn.textContent = "복사됨";
+      setTimeout(()=>{ copyBtn.textContent = "결과 복사"; }, 1500);
+    } catch(e){
+      alert("복사에 실패했습니다.");
+    }
+    document.body.removeChild(ta);
+  }
+
+  renderDocList(readDocs());
+})();
+</script>
+</body>
+</html>
