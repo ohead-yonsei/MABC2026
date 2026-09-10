@@ -10,11 +10,33 @@ const _samples = require("./_samples.js");
 const HAS_DOCS_TERM = /(제출|서류|신청서|증명|사업자등록|부가가치세|과세표준|4대보험|가입자명부|신분증|가점|추가\s*서류|제출\s*서류|제출서류)/i;
 
 module.exports = async function (req, res) {
+  const allowedMethods = new Set(["POST","GET","HEAD"]);
+  if (!allowedMethods.has(req.method)) {
+    return res.status(405).json({ error: "허용되지 않은 메서드입니다." });
+  }
+
   let body;
-  try {
-    body = await req.json();
-  } catch (err) {
-    return res.status(400).json({ error: "잘못된 요청 본문입니다." });
+  if (typeof req.body === "string") {
+    try {
+      body = JSON.parse(req.body);
+    } catch (err) {
+      return res.status(400).json({ error: "잘못된 요청 본문입니다." });
+    }
+  } else if (req.body && typeof req.body === "object") {
+    body = req.body;
+  } else {
+    let raw = "";
+    const chunks = [];
+    for await (const chunk of req) {
+      if (chunk instanceof Buffer) chunks.push(chunk);
+      else raw += chunk;
+    }
+    raw = Buffer.concat(chunks).toString("utf8");
+    try {
+      body = JSON.parse(raw);
+    } catch (err) {
+      return res.status(400).json({ error: "잘못된 요청 본문입니다." });
+    }
   }
 
   const text = (body.text || "").trim();
