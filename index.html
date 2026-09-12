@@ -201,7 +201,7 @@
   const tabCompare = $("#tab-compare");
   const tabDocs = $("#tab-docs");
   const tabIntro = $("#tab-intro");
-  const noticeEl = $("#notice");
+  let noticeEl = $("#notice");
   const resultBox = $("#resultBox");
   const resultSummary = $("#resultSummary");
   const resultTable = $("#resultTable");
@@ -419,6 +419,7 @@
       el.style.marginTop = "14px";
       el.style.fontSize = "13px";
       document.querySelector("#right-result").appendChild(el);
+      noticeEl = el;
     }
     noticeEl.textContent = msg;
     noticeEl.style.display = "block";
