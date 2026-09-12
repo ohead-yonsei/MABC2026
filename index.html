@@ -5,28 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>빠진칸 — 공고 제출요건 누락 대조</title>
 <style>
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;max-width:880px;margin:24px auto;padding:0 16px;color:#111;line-height:1.6}
+body{font-family:-apple-system,"Pretendard Variable",Pretendard,system-ui,"Malgun Gothic",sans-serif;max-width:920px;margin:28px auto;padding:0 16px;color:#111;line-height:1.6;letter-spacing:-0.01em}
 h1{font-size:18px;margin:0 0 8px}
-textarea{width:100%;min-height:140px;font-family:inherit;font-size:14px;border:1px solid #888;border-radius:6px;padding:10px}
-button{margin-top:8px;background:#2563eb;color:#fff;border:1px solid #2563eb;border-radius:6px;padding:8px 14px;cursor:pointer}
-button:hover{background:#1d4ed8}
-.note{color:#555;font-size:13px;margin:6px 0}
-.result{border:1px solid #888;border-radius:6px;padding:12px;margin-top:14px}
+textarea{width:100%;min-height:132px;font-family:inherit;font-size:15px;border:1px solid #b8b8b8;border-radius:6px;padding:9px 10px;background:#fff}
+button{font-family:inherit;cursor:pointer;border-radius:6px}
+button[type="button"]{background:#2563eb;color:#fff;border:1px solid #2563eb;padding:8px 14px}
+button[type="button"]:hover{background:#1d4ed8}
+button.ghost{background:#fff;color:#b91c1c;border:1px solid #b91c1c;border-radius:6px;padding:7px 12px}
+.note{color:#555;font-size:14px;margin:8px 0}
+.result{border:1px solid #d0d0d0;border-radius:8px;padding:12px;margin-top:14px;background:#fff}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{border:1px solid #d0d0d0;padding:6px 8px;text-align:left;vertical-align:top}
-th{background:#f3f4f6}
-.tag{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px}
-.tag.cond{background:#fde68a;color:#7c2d12}
-.tag.missing{background:#fecaca;color:#7f1d1d}
-.tag.fmt{background:#fef08a;color:#713f1b}
-.tag.cannot{background:#dbeafe;color:#1e3a8a}
-.tag.ok{background:#dcfce7;color:#14532d}
+th,td{border-bottom:1px solid #d0d0d0;padding:7px 8px;text-align:left;vertical-align:top}
+th{background:#f3f4f6;border-bottom:1px solid #b8b8b8}
+td:first-child,table td.num{border-right:1px solid #d0d0d0}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:-0.01em}
+.tag.cond{background:#f3f4f6;color:#5b6470}
+.tag.missing{background:#fbeaea;color:#9b1c1c;border-left:3px solid #9b1c1c}
+.tag.fmt{background:#fff7ed;color:#b45309;border-left:3px solid #b45309}
+.tag.cannot{background:#f3f4f6;color:#5b6470;border-left:3px solid #5b6470}
+.tag.ok{background:rgba(22,128,61,0.12);color:#15803d;border-left:3px solid #15803d}
+.tag .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
 p{margin:6px 0}
 .small{color:#555;font-size:12px}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.hint{margin:10px 0 0;color:#333;font-size:13px}
-.warn{background:#fbeaea;border:1px solid #b71c1c;border-radius:6px;padding:8px;margin-top:10px;color:#7f1d1d;font-size:13px}
-.footer{margin-top:18px;color:#555;font-size:12px;border-top:1px solid #e5e7eb;padding-top:10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hint{margin:8px 0 0;color:#111;font-size:13px}
+.warn{background:#fbeaea;border:1px solid #b71c1c;border-radius:6px;padding:8px;margin-top:14px;color:#9b1c1c;font-size:13px}
+.footer{margin-top:22px;color:#555;font-size:12px;border-top:1px solid #e5e7eb;padding-top:10px}
+tr.row-ok td{opacity:0.42}
 </style>
 </head>
 <body>
@@ -237,22 +242,19 @@ p{margin:6px 0}
       const tdStatus = document.createElement("td");
       const tag = document.createElement("span");
       tag.className = "tag " + statusClass(r.status);
-      tag.textContent = r.status;
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      tag.appendChild(dot);
+      tag.appendChild(document.createTextNode(" " + r.status));
       tdStatus.appendChild(tag);
       const tdQuestion = document.createElement("td");
       tdQuestion.textContent = r.question || "—";
-      if(!r.question){
-        const hint = document.createElement("div");
-        hint.className = "small";
-        hint.textContent = "접수 기한을 제출하셨나요?";
-        tdQuestion.appendChild(hint);
-      }
 
-      if(["미충족","형식확인","충족"].includes(r.status)){
+      if(["미충족","형식확인"].includes(r.status)){
         const haveBtn = document.createElement("button");
         haveBtn.textContent = "가지고 있음";
         haveBtn.type = "button";
-        haveBtn.style.cssText = "background:#2563eb;color:#fff;border:1px solid #2563eb;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;margin-top:6px";
+        haveBtn.className = "ghost";
         haveBtn.addEventListener("click", ()=>{
           const docs = readDocs();
           if(!docs.some(x=>x.name===r.name)){
@@ -264,18 +266,18 @@ p{margin:6px 0}
           runWithText(textEl.value, readDocs());
         });
         const issuedRow = document.createElement("div");
-        issuedRow.style.cssText = "margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap";
+        issuedRow.style.cssText = "margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap";
         const issuedLabel = document.createElement("label");
         issuedLabel.textContent = "발급일 ";
         const issuedInput = document.createElement("input");
         issuedInput.type = "text";
         issuedInput.placeholder = "YYYY-MM-DD";
-        issuedInput.style.cssText = "border:1px solid #888;border-radius:4px;padding:2px 6px;font-size:12px";
+        issuedInput.style.cssText = "border:1px solid #b8b8b8;border-radius:4px;padding:5px 6px;font-size:12px";
         issuedInput.maxLength = 10;
         const setIssuedBtn = document.createElement("button");
         setIssuedBtn.textContent = "설정";
         setIssuedBtn.type = "button";
-        setIssuedBtn.style.cssText = "background:#1d4ed8;color:#fff;border:1px solid #1d4ed8;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:12px";
+        setIssuedBtn.style.cssText = "background:#1d4ed8;color:#fff;border:1px solid #1d4ed8;border-radius:4px;padding:5px 8px;cursor:pointer;font-size:12px";
         setIssuedBtn.addEventListener("click", ()=>{
           const docs = readDocs();
           const item = docs.find(x=>x.name===r.name);
