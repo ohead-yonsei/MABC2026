@@ -3,73 +3,168 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>빠진칸 — 공고 제출요건 누락 대조</title>
+<title>비칸 — 공고 제출요건 누락 대조</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style>
-body{font-family:-apple-system,"Pretendard Variable",Pretendard,system-ui,"Malgun Gothic",sans-serif;max-width:920px;margin:28px auto;padding:0 16px;color:#111;line-height:1.6;letter-spacing:-0.01em}
-h1{font-size:18px;margin:0 0 8px}
-textarea{width:100%;min-height:132px;font-family:inherit;font-size:15px;border:1px solid #b8b8b8;border-radius:6px;padding:9px 10px;background:#fff}
-button{font-family:inherit;cursor:pointer;border-radius:6px}
-button[type="button"]{background:#2563eb;color:#fff;border:1px solid #2563eb;padding:8px 14px}
-button[type="button"]:hover{background:#1d4ed8}
-button.ghost{background:#fff;color:#b91c1c;border:1px solid #b91c1c;border-radius:6px;padding:7px 12px}
-.note{color:#555;font-size:14px;margin:8px 0}
-.result{border:1px solid #d0d0d0;border-radius:8px;padding:12px;margin-top:14px;background:#fff}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{border-bottom:1px solid #d0d0d0;padding:7px 8px;text-align:left;vertical-align:top}
-th{background:#f3f4f6;border-bottom:1px solid #b8b8b8}
-td:first-child,table td.num{border-right:1px solid #d0d0d0}
-.tag{display:inline-flex;align-items:center;gap:5px;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:-0.01em}
-.tag.cond{background:#f3f4f6;color:#5b6470}
-.tag.missing{background:#fbeaea;color:#9b1c1c;border-left:3px solid #9b1c1c}
-.tag.fmt{background:#fff7ed;color:#b45309;border-left:3px solid #b45309}
-.tag.cannot{background:#f3f4f6;color:#5b6470;border-left:3px solid #5b6470}
-.tag.ok{background:rgba(22,128,61,0.12);color:#15803d;border-left:3px solid #15803d}
-.tag .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
-p{margin:6px 0}
-.small{color:#555;font-size:12px}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.hint{margin:8px 0 0;color:#111;font-size:13px}
-.warn{background:#fbeaea;border:1px solid #b71c1c;border-radius:6px;padding:8px;margin-top:14px;color:#9b1c1c;font-size:13px}
-.footer{margin-top:22px;color:#555;font-size:12px;border-top:1px solid #e5e7eb;padding-top:10px}
-tr.row-ok td{opacity:0.42}
+  .doc-card{border-radius:10px;border:1px solid #e5e7eb;padding:12px 14px;background:#fff}
+  .doc-card.ok{background:#f0fdf4;border-color:#86efac}
+  .doc-card.missing{background:#fef2f2;border-color:#fca5a5}
+  .doc-card.cond{border-color:#d1d5db}
+  .doc-card .doc-name{font-weight:600;font-size:14px}
+  .doc-card .doc-issued{font-size:12px;color:#4b5563;margin-top:2px}
+  .doc-card .doc-tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;display:inline-block}
+  .doc-card .doc-del{background:#fff;color:#991b1b;border:1px solid #dc2626;border-radius:5px;padding:2px 8px;font-size:12px}
+  .doc-card .doc-edit{background:#fff;border:1px solid #6b7280;border-radius:5px;padding:2px 8px;font-size:12px;color:#111}
+  .doc-card .doc-register{background:#fff;border:1px solid #16a34a;border-radius:5px;padding:2px 8px;font-size:12px;color:#15803d;font-weight:600}
+  .doc-card .doc-issue{background:#fff;border:1px solid #2563eb;border-radius:5px;padding:2px 8px;font-size:12px;color:#1d4ed8;font-weight:600}
+  #dropZone{border:2px dashed #d1d5db;border-radius:10px;padding:22px;transition:background .12s,border-color .12s;cursor:pointer}
+  #dropZone.dragover{background:#eff6ff;border-color:#3b82f6}
+  .tab-btn{font-size:13px;font-weight:500;padding:6px 10px;border-radius:6px;transition:background .12s,color .12s}
+  .tab-btn.active{background:#eff6ff;color:#1d4ed8;font-weight:600}
+  .tab-btn:not(.active):hover{background:#f3f4f6}
+  .right-panel{}
+  .tab-content{display:none}
+  .tab-content.active{display:block}
+  #right-docs{min-height:320px}
+  #right-result{min-height:320px}
+  .result-foot{margin-top:12px;padding-top:10px;border-top:1px solid #e5e7eb;color:#555;font-size:13px}
+  /* 레이아웃 안정화 */
+  main.grid-layout{display:grid;grid-template-columns:1fr;gap:2rem;min-width:0}
+  @media (min-width:1024px){
+    main.grid-layout{grid-template-columns:1fr 1fr}
+  }
+  #left-panel,.right-panel{min-width:0;overflow-x:hidden}
+  .right-panel.grid-col-span-2{lg:col-span-2}
+  .doc-card .head,.doc-card .right{flex-wrap:wrap;min-width:0}
+  .doc-name{word-break:break-word}
 </style>
 </head>
-<body>
-<h1>빠진칸 — 공고 제출요건 누락 대조</h1>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen flex flex-col">
 
-<textarea id="text" placeholder="준비 중인 공고문을 통째로 붙여넣으세요."></textarea>
-<button type="button" id="runBtn">대조하기</button>
-<button type="button" id="sampleBtn">예시 공고로 해보기</button>
-<p class="note">공고문과 내 서류를 대조해 빠진 것만 찾습니다. 자격 판정은 하지 않습니다.</p>
+<header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-14 items-center">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-layer-group text-blue-600 text-lg"></i>
+        <span class="font-bold text-base tracking-tight">비칸</span>
+      </div>
+      <nav class="hidden md:flex gap-2 text-sm font-medium text-gray-500">
+        <a href="#" id="tab-intro" class="tab-btn cursor-default">서비스 소개</a>
+        <a href="#" id="tab-compare" class="tab-btn active">공고 비교하기</a>
+        <a href="#" id="tab-docs" class="tab-btn">내 서류함</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+          <i class="fa-solid fa-user text-sm"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
 
-<div id="docBox" style="display:none">
-<h2>내 서류함</h2>
-<p class="small">서류명과 발급일만 저장합니다. 파일·주민번호·사업자번호·계좌번호는 받지 않습니다. 서버에는 저장하지 않습니다.</p>
-<div id="docList"></div>
-<button type="button" id="docAddBtn">서류 추가</button>
-<button type="button" id="docResetBtn" style="color:#b91c1c;border-color:#b91c1c;background:#fff">서류함 전체 초기화</button>
-</div>
+<main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full grid grid-cols-1 gap-8 lg:grid-cols-2">
 
-<div id="notice" style="display:none"></div>
+  <!-- 왼쪽 패널: 공고 비교하기 탭에서만 노출 -->
+  <div id="left-panel" class="lg:col-span-1">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+        <i class="fa-regular fa-file-lines text-gray-400"></i> 공고문 입력
+      </h2>
+      <textarea id="text" class="w-full flex-grow min-h-[300px] p-4 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition resize-none text-sm leading-relaxed" placeholder="분석할 공고문 내용을 여기에 붙여넣으세요."></textarea>
+      <div id="dropZone" class="mt-5">
+        <div class="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid fa-cloud-arrow-up text-blue-500 text-xl"></i>
+        </div>
+        <p class="text-sm font-medium text-gray-700 text-center">여기로 공고문 파일을 드래그 앤 드롭 하세요</p>
+        <p class="text-xs text-gray-400 mt-1 text-center">PDF, JPG, PNG 파일 지원 (최대 10MB)</p>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button id="runBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition shadow-sm">
+          대조하기
+        </button>
+        <button id="sampleBtn" class="px-5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2.5 rounded-lg transition shadow-sm">
+          예시 공고로 해보기
+        </button>
+      </div>
+      <p class="text-xs text-gray-400 mt-3 text-center">
+        * 이 결과는 공고 원문 대조 결과이며 자격 판정이 아닙니다.
+      </p>
+    </div>
+  </div>
 
-<div id="resultBox" style="display:none">
-<p class="small" id="resultSummary"></p>
-<div class="result">
-<table id="resultTable">
-<thead>
-<tr><th>#</th><th>요건</th><th>공고 원문 근거</th><th>보유</th><th>상태</th><th>확인 질문</th></tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
-<div id="resultAction" class="hint"></div>
-<p class="small" id="resultDisclaimer"></p>
-<button type="button" id="copyBtn">결과 복사</button>
-</div>
+  <!-- 오른쪽 패널: 탭별로 내용이 바뀜 -->
+  <div class="right-panel lg:col-span-1">
+    <!-- 공고 비교하기 탭: 대조 결과 -->
+    <div id="right-result" class="tab-content active">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex justify-between items-end mb-4">
+          <h2 class="text-lg font-semibold flex items-center gap-2">
+            <i class="fa-regular fa-folder-open text-gray-400"></i> 공고 비교 결과
+          </h2>
+          <div id="docCountTag" class="text-sm text-gray-500">내 서류: 0</div>
+        </div>
 
-<div class="footer">
-이 결과는 공고 원문 대조 결과이며 자격 판정이 아닙니다. 최종 확인은 주관기관 공고와 담당 부서를 따르십시오.
-</div>
+        <div id="contrastList" class="flex flex-col gap-3 flex-grow overflow-y-auto pr-1"></div>
+
+        <div id="contrastSummary" class="text-sm text-gray-500 mb-3">대조할 수 있는 서류가 없습니다. ‘내 서류함’에서 서류를 추가하세요.</div>
+      </div>
+    </div>
+
+    <!-- 내 서류함 탭: 내 서류 관리 -->
+    <div id="right-docs" class="tab-content">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex justify-between items-end mb-4">
+          <h2 class="text-lg font-semibold flex items-center gap-2">
+            <i class="fa-regular fa-folder-open text-gray-400"></i> 내 서류함
+          </h2>
+          <div id="docCountTagDocs" class="text-sm text-gray-500">총 서류: 0</div>
+        </div>
+
+        <div id="docListDocs" class="flex flex-col gap-3 flex-grow overflow-y-auto pr-1"></div>
+
+        <div id="docPreview" class="mt-4 pt-4 border-t border-gray-100 hidden">
+          <div class="flex justify-between items-start gap-3">
+            <div>
+              <p class="text-sm text-gray-400">선택한 서류</p>
+              <p id="previewName" class="font-semibold text-lg mt-1"></p>
+              <p id="previewIssued" class="text-sm text-gray-500 mt-1"></p>
+              <p id="previewRegDate" class="text-sm text-gray-400 mt-1"></p>
+              <p id="previewModDate" class="text-sm text-gray-400 mt-1"></p>
+            </div>
+            <div class="flex gap-2 shrink-0">
+              <button id="previewEditBtn" class="text-sm text-gray-500 hover:text-gray-800">수정</button>
+              <button id="previewDeleteBtn" class="text-sm text-red-600 hover:text-red-800">삭제</button>
+            </div>
+          </div>
+          <button id="previewCloseBtn" class="mt-3 text-sm text-gray-500 hover:text-gray-800">닫기</button>
+        </div>
+
+        <div class="flex justify-between items-center mt-5 pt-4 border-t border-gray-100">
+          <button id="docResetBtnDocs" class="text-sm text-gray-500 hover:text-gray-800 font-medium">전체 초기화</button>
+          <button id="docAddBtnDocs" class="bg-gray-800 hover:bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-lg transition">
+            새 서류 등록
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer class="bg-white border-t border-gray-200 mt-auto">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="flex justify-between items-center gap-4">
+      <div class="text-sm text-gray-500">
+        &copy; 2026 비칸. 이 결과는 공고 원문 대조 결과이며 자격 판정이 아닙니다.
+      </div>
+      <div class="flex gap-4 text-sm text-gray-500">
+        <a href="#" class="hover:text-gray-800 cursor-default">이용약관</a>
+        <a href="#" class="hover:text-gray-800 cursor-default">개인정보처리방침</a>
+      </div>
+    </div>
+  </div>
+</footer>
 
 <script>
 (function(){
@@ -92,10 +187,22 @@ tr.row-ok td{opacity:0.42}
   const textEl = $("#text");
   const runBtn = $("#runBtn");
   const sampleBtn = $("#sampleBtn");
-  const docBox = $("#docBox");
   const docList = $("#docList");
+  const docListDocs = $("#docListDocs");
   const docAddBtn = $("#docAddBtn");
   const docResetBtn = $("#docResetBtn");
+  const docAddBtnDocs = $("#docAddBtnDocs");
+  const docResetBtnDocs = $("#docResetBtnDocs");
+  const docCountTag = $("#docCountTag");
+  const docCountTagDocs = $("#docCountTagDocs");
+  const dropZone = $("#dropZone");
+  const leftPanel = $("#left-panel");
+  const rightResult = $("#right-result");
+  const rightDocs = $("#right-docs");
+  const rightPanel = document.querySelector(".right-panel");
+  const tabCompare = $("#tab-compare");
+  const tabDocs = $("#tab-docs");
+  const tabIntro = $("#tab-intro");
   const noticeEl = $("#notice");
   const resultBox = $("#resultBox");
   const resultSummary = $("#resultSummary");
@@ -111,75 +218,358 @@ tr.row-ok td{opacity:0.42}
   }
   function writeDocs(docs){ try { localStorage.setItem(STORAGE_KEY_DOCS, JSON.stringify(docs)); } catch(e){} }
 
-  function renderDocList(docs){
+  function normalizeName(name){
+    return name.toLowerCase().trim().replace(/[\s\-()[]]/g, "");
+  }
+
+  function isPublicDocument(name){
+    const n = name.toLowerCase();
+    return /\b(증명서|확인증|신고증|등록증|허가증|확인서|확인서|등본|초본|납세증명|자격확인|인허가|신고필증)\b/.test(n);
+  }
+
+  // 왼쪽 패널 내 서류 목록을 상태에 따라 렌더링 (대조 결과 탭용)
+  function renderDocList(docs, statuses){
     docList.innerHTML = "";
+    docCountTag.textContent = "내 서류: " + docs.length;
     if(!docs.length){
-      docBox.style.display = "block";
-      docList.innerHTML = "<p class='small'>아직 등록한 서류가 없습니다. 대조 결과에서 ‘가지고 있음’을 눌러 서류함을 채울 수 있습니다.</p>";
+      docList.innerHTML = "<p class='text-sm text-gray-400'>아직 등록한 서류가 없습니다. 대조 결과에서 '등록하기'로 서류를 추가하세요.</p>";
       return;
     }
-    docBox.style.display = "block";
-    docList.innerHTML = `<p class='small'>내 서류함 (${docs.length}건)</p>`;
     for(const d of docs){
-      const row = document.createElement("div");
-      row.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap";
+      const card = document.createElement("div");
+      const norm = normalizeName(d.name);
+      const status = statuses && statuses[norm] ? statuses[norm] : "대조전";
+      let cardClass = "doc-card cond";
+      let badgeText = "";
+      let badgeClass = "";
+      if(status === "대조전"){
+        cardClass = "doc-card cond";
+        badgeText = "대조 전";
+        badgeClass = "bg-gray-100 text-gray-600";
+      } else if(status === "충족"){
+        cardClass = "doc-card ok";
+        badgeText = "조건 충족";
+        badgeClass = "bg-green-100 text-green-700";
+      } else if(status === "미충족"){
+        cardClass = "doc-card missing";
+        badgeText = "미충족";
+        badgeClass = "bg-red-100 text-red-700";
+      } else if(status === "형식확인"){
+        cardClass = "doc-card cond";
+        badgeText = "형식 확인 필요";
+        badgeClass = "bg-yellow-100 text-yellow-700";
+      } else if(status === "판단불가"){
+        cardClass = "doc-card cond";
+        badgeText = "판단 불가";
+        badgeClass = "bg-gray-100 text-gray-600";
+      } else {
+        cardClass = "doc-card missing";
+        badgeText = "서류 누락";
+        badgeClass = "bg-red-100 text-red-700";
+      }
+      const head = document.createElement("div");
+      head.className = "flex items-center justify-between gap-3";
+      const info = document.createElement("div");
       const nameEl = document.createElement("div");
+      nameEl.className = "doc-name";
       nameEl.textContent = d.name;
-      nameEl.style.fontWeight = "600";
       const issuedEl = document.createElement("div");
-      issuedEl.textContent = d.issued ? `발급일: ${d.issued}` : "발급일 없음";
-      issuedEl.className = "small";
+      issuedEl.className = "doc-issued";
+      issuedEl.textContent = d.issued ? ("발급일: " + d.issued) : "발급일 없음";
+      info.appendChild(nameEl);
+      info.appendChild(issuedEl);
+      const right = document.createElement("div");
+      right.className = "flex items-center gap-2";
+      if(status === "미충족" || status === "서류 누락" || status === "대조전"){
+        const regBtn = document.createElement("button");
+        regBtn.type = "button";
+        regBtn.className = "doc-register";
+        regBtn.textContent = "등록하기";
+        regBtn.setAttribute("data-register", d.name.replace(/"/g, "&quot;"));
+        right.appendChild(regBtn);
+        if(isPublicDocument(d.name)){
+          const issueBtn = document.createElement("button");
+          issueBtn.type = "button";
+          issueBtn.className = "doc-issue";
+          issueBtn.textContent = "발급하기";
+          issueBtn.setAttribute("data-issue", d.name.replace(/"/g, "&quot;"));
+          right.appendChild(issueBtn);
+        }
+      }
       const delBtn = document.createElement("button");
-      delBtn.textContent = "삭제";
       delBtn.type = "button";
-      delBtn.style.cssText = "background:#fff;color:#b91c1c;border:1px solid #b91c1c;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px";
+      delBtn.className = "doc-del";
+      delBtn.textContent = "삭제";
       delBtn.addEventListener("click", ()=>{
         const next = readDocs().filter(x=>x!==d);
         writeDocs(next);
         renderDocList(next);
+        renderDocListDocs(next);
       });
-      row.appendChild(nameEl);
-      row.appendChild(issuedEl);
-      row.appendChild(delBtn);
-      docList.appendChild(row);
+      right.appendChild(delBtn);
+      const badge = document.createElement("span");
+      badge.className = "doc-tag " + badgeClass;
+      badge.textContent = badgeText;
+      right.insertBefore(badge, right.firstChild);
+      head.appendChild(info);
+      head.appendChild(right);
+      card.appendChild(head);
+      card.className = cardClass;
+      docList.appendChild(card);
     }
+    // 등록하기 버튼 이벤트 바인딩
+    docList.querySelectorAll(".doc-register").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const name = btn.getAttribute("data-register");
+        const issued = prompt("발급일 (선택, YYYY-MM-DD):", "");
+        const docs = readDocs();
+        docs.push({ name: name.trim(), issued: issued && issued.trim() ? issued.trim() : null });
+        writeDocs(docs);
+        const statuses = buildStatusesFromResult(currentResult);
+        renderDocList(docs, statuses);
+        renderDocListDocs(docs);
+      });
+    });
+    docList.querySelectorAll(".doc-issue").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const name = btn.getAttribute("data-issue");
+        alert(name + " 발급 안내: 해당 서류는 관공서/공공기관에서 발급 가능합니다. (서비스 연동 예정)");
+      });
+    });
   }
 
-  docAddBtn.addEventListener("click", ()=>{
-    const name = prompt("서류명:");
-    if(!name || !name.trim()) return;
-    const issued = prompt("발급일 (선택, YYYY-MM-DD):", "");
-    const docs = readDocs();
-    docs.push({ name: name.trim(), issued: issued && issued.trim() ? issued.trim() : null });
-    writeDocs(docs);
-    renderDocList(docs);
-  });
+  // 내 서류함 탭용 순수 목록 렌더링 (상태 뱃지 없음, 수정/삭제만)
+  function renderDocListDocs(docs){
+    docListDocs.innerHTML = "";
+    docCountTagDocs.textContent = "총 서류: " + docs.length;
+    $("#docPreview").classList.add("hidden");
+    if(!docs.length){
+      docListDocs.innerHTML = "<p class='text-sm text-gray-400'>아직 등록한 서류가 없습니다. '새 서류 등록'으로 서류를 추가하세요.</p>";
+      return;
+    }
+    for(const d of docs){
+      const card = document.createElement("div");
+      card.className = "doc-card cond";
+      const head = document.createElement("div");
+      head.className = "flex items-center justify-between gap-3";
+      const info = document.createElement("div");
+      const nameEl = document.createElement("div");
+      nameEl.className = "doc-name";
+      nameEl.textContent = d.name;
+      const issuedEl = document.createElement("div");
+      issuedEl.className = "doc-issued";
+      issuedEl.textContent = d.issued ? ("발급일: " + d.issued) : "발급일 없음";
+      info.appendChild(nameEl);
+      info.appendChild(issuedEl);
+      const right = document.createElement("div");
+      right.className = "flex items-center gap-2";
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "doc-edit";
+      editBtn.textContent = "수정";
+      editBtn.addEventListener("click", ()=>{
+        const newName = prompt("서류명:", d.name);
+        if(!newName || !newName.trim()) return;
+        const newIssued = prompt("발급일 (선택, YYYY-MM-DD):", d.issued || "");
+        const idx = readDocs().indexOf(d);
+        if(idx >= 0){
+          const arr = readDocs();
+          arr[idx] = { name: newName.trim(), issued: newIssued && newIssued.trim() ? newIssued.trim() : null };
+          writeDocs(arr);
+          renderDocListDocs(readDocs());
+          if(currentTab === "compare") renderDocList(readDocs(), buildStatusesFromResult(currentResult));
+        }
+      });
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "doc-del";
+      delBtn.textContent = "삭제";
+      delBtn.addEventListener("click", ()=>{
+        const next = readDocs().filter(x=>x!==d);
+        writeDocs(next);
+        renderDocListDocs(next);
+        if(currentTab === "compare") renderDocList(next, buildStatusesFromResult(currentResult));
+      });
+      right.appendChild(editBtn);
+      right.appendChild(delBtn);
+      head.appendChild(info);
+      head.appendChild(right);
+      card.appendChild(head);
+      docListDocs.appendChild(card);
+    }
 
-  docResetBtn.addEventListener("click", ()=>{
-    if(!confirm("서류함 전체를 초기화하시겠습니까?")) return;
-    writeDocs([]);
-    renderDocList([]);
-  });
-
-  function statusClass(s){
-    if(s==="미충족") return "missing";
-    if(s==="형식확인") return "fmt";
-    if(s==="판단불가") return "cannot";
-    if(s==="충족") return "ok";
-    return "";
+    // 열람: 카드 클릭 시 오른쪽 미리보기
+    docListDocs.querySelectorAll(".doc-card").forEach(card=>{
+      const idx = Array.prototype.indexOf.call(docListDocs.querySelectorAll(".doc-card"), card);
+      if(!(idx >= 0)) return;
+      const d = docs[idx];
+      if(!d) return;
+      card.addEventListener("click", ()=> showDocPreview(d));
+    });
   }
 
   function showNotice(msg){
+    if(!noticeEl){
+      const el = document.createElement("div");
+      el.id = "notice";
+      el.className = "result-foot";
+      el.style.color = "#9b1c1c";
+      el.style.background = "#fef2f2";
+      el.style.border = "1px solid #fca5a5";
+      el.style.borderRadius = "6px";
+      el.style.padding = "8px";
+      el.style.marginTop = "14px";
+      el.style.fontSize = "13px";
+      document.querySelector("#right-result").appendChild(el);
+    }
     noticeEl.textContent = msg;
     noticeEl.style.display = "block";
-    noticeEl.className = "warn";
   }
+
+  // 열람: 카드 클릭 시 오른쪽 미리보기
+  function showDocPreview(doc){
+    // 최초 등록일/최종 수정일 추정(보관된 문서에 필드가 없을 수 있음)
+    const now = new Date().toLocaleString("ko-KR");
+    $("#previewName").textContent = doc.name;
+    $("#previewIssued").textContent = doc.issued ? ("발급일: " + doc.issued) : "발급일 없음";
+    $("#previewRegDate").textContent = "등록: " + (doc.regDate ? doc.regDate : now);
+    $("#previewModDate").textContent = "최종 수정: " + now;
+    $("#docPreview").classList.remove("hidden");
+
+    $("#previewEditBtn").onclick = ()=>{
+      const newName = prompt("서류명:", doc.name);
+      if(!newName || !newName.trim()) return;
+      const newIssued = prompt("발급일 (선택, YYYY-MM-DD):", doc.issued || "");
+      const docs = readDocs();
+      const idx = docs.indexOf(doc);
+      if(idx >= 0){
+        docs[idx] = { name: newName.trim(), issued: newIssued && newIssued.trim() || null, regDate: docs[idx].regDate || new Date().toLocaleString("ko-KR"), modDate: now };
+        writeDocs(docs);
+        renderDocListDocs(docs);
+        $("#docPreview").classList.add("hidden");
+      }
+    };
+    $("#previewDeleteBtn").onclick = ()=>{
+      if(!confirm("'" + doc.name + "'을(를) 삭제하시겠습니까?")) return;
+      const next = readDocs().filter(x=>x!==doc);
+      writeDocs(next);
+      renderDocListDocs(next);
+      $("#docPreview").classList.add("hidden");
+    };
+    $("#previewCloseBtn").onclick = ()=> $("#docPreview").classList.add("hidden");
+  }
+
+  // 대비용: 필요 서류+보유 여부 전용 렌더
+  function renderContrastResult(result){
+    const rows = result && result.rows ? result.rows : [];
+    const list = $("#contrastList");
+    if(!rows.length){
+      list.innerHTML = "<p class='text-sm text-gray-400'>대조 결과가 없습니다.</p>";
+      $("#contrastSummary").textContent = "대조 결과가 없습니다.";
+      return;
+    }
+
+    const ownedNames = readDocs().map(d=>d.name);
+    const ownedNorms = new Set(ownedNames.map(normalizeName));
+
+    list.innerHTML = "";
+    let needCount = 0;
+    let haveCount = 0;
+
+    for(const row of rows){
+      const r = document.createElement("div");
+      r.className = "border border-gray-100 rounded-lg p-4";
+      const needNorm = normalizeName(row.needName || row.need || "");
+      const isOwn = ownedNorms.has(needNorm);
+      if(!isOwn) needCount++;
+      else haveCount++;
+
+      const head = document.createElement("div");
+      head.className = "flex justify-between items-start gap-2 mb-2";
+
+      const name = document.createElement("div");
+      name.className = "font-medium";
+      name.textContent = row.needName || row.need;
+      head.appendChild(name);
+
+      const badge = document.createElement("span");
+      if(isOwn){
+        badge.className = "text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded";
+        badge.textContent = "가지고 있음";
+      } else {
+        badge.className = "text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded";
+        badge.textContent = "필요함";
+      }
+      head.appendChild(badge);
+      r.appendChild(head);
+
+      const sub = document.createElement("div");
+      sub.className = "text-sm text-gray-500";
+      sub.textContent = row.matchNote || "";
+      r.appendChild(sub);
+
+      list.appendChild(r);
+    }
+
+    $("#contrastSummary").textContent = "필수·구비 서류 " + (needCount+haveCount) + "건 중 보유 " + haveCount + "건, 필요 " + needCount + "건";
+    $("#docCountTag").textContent = "내 서류: " + ownedNames.length;
+  }
+
+  let currentTab = "compare";
+  let currentResult = null;
+
+  function buildStatusesFromResult(result){
+    if(!result || !result.rows) return {};
+    const m = {};
+    for(const r of result.rows){
+      const norm = normalizeName(r.name);
+      m[norm] = r.status;
+    }
+    return m;
+  }
+
+  function tabSwitch(tab){
+    currentTab = tab;
+    tabCompare.classList.toggle("active", tab === "compare");
+    tabDocs.classList.toggle("active", tab === "docs");
+    tabIntro.classList.toggle("active", tab === "intro");
+    if(tab === "compare"){
+      leftPanel.classList.remove("hidden");
+      leftPanel.classList.remove("lg:col-span-2");
+      rightPanel.classList.remove("lg:col-span-2");
+      rightPanel.classList.add("lg:col-span-1");
+      rightResult.classList.add("active");
+      rightDocs.classList.remove("active");
+      if(!currentResult){
+        renderDocList(readDocs(), {});
+      } else {
+        renderDocList(readDocs(), buildStatusesFromResult(currentResult));
+      }
+      // 대비용: 필요 서류+보유 여부 전용 렌더
+      renderContrastResult(currentResult);
+    } else {
+      leftPanel.classList.add("hidden");
+      leftPanel.classList.add("lg:col-span-2");
+      rightPanel.classList.remove("lg:col-span-1");
+      rightPanel.classList.add("lg:col-span-2");
+      rightResult.classList.remove("active");
+      rightDocs.classList.remove("active");
+      if(tab === "docs"){
+        rightDocs.classList.add("active");
+        renderDocListDocs(readDocs());
+      }
+    }
+  }
+
+  tabCompare.addEventListener("click", (e)=>{ e.preventDefault(); tabSwitch("compare"); });
+  tabDocs.addEventListener("click", (e)=>{ e.preventDefault(); tabSwitch("docs"); });
+  tabIntro.addEventListener("click", (e)=>{ e.preventDefault(); tabSwitch("intro"); });
 
   function runWithText(text, docs){
     if(!text.trim()){ showNotice("공고문을 붙여넣어 주세요."); return; }
     runBtn.disabled = true;
-    resultBox.style.display = "none";
-    noticeEl.style.display = "none";
+    currentResult = null;
+    if(!noticeEl) showNotice("");
     fetch("/api/check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -194,10 +584,12 @@ tr.row-ok td{opacity:0.42}
         }
         if(data.notice){
           showNotice(data.notice);
-          resultBox.style.display = "none";
           return;
         }
-        renderResult(data);
+        currentResult = data;
+        // 대조 결과 탭으로 전환
+        tabSwitch("compare");
+        renderDocList(docs, buildStatusesFromResult(data));
       })
       .catch(err=>{
         runBtn.disabled = false;
@@ -205,173 +597,73 @@ tr.row-ok td{opacity:0.42}
       });
   }
 
-  function renderResult(data){
-    resultBox.style.display = "block";
-    resultSummary.textContent = data.summary || "";
-    const tbody = resultTable.querySelector("tbody");
-    tbody.innerHTML = "";
-    if(!data.rows || !data.rows.length){
-      const tr = document.createElement("tr");
-      const td = document.createElement("td");
-      td.colSpan = 6;
-      td.textContent = data.notice || "";
-      td.style.padding = "10px";
-      tr.appendChild(td);
-      tbody.appendChild(tr);
-      resultAction.textContent = "지금 준비할 서류: 없음 / 지금 확인할 질문: 없음 / 마감일: 없음";
-      resultDisclaimer.textContent = data.disclaimer || "";
-      return;
-    }
-    for(let i=0;i<data.rows.length;i++){
-      const r = data.rows[i];
-      const tr = document.createElement("tr");
-      const tdNo = document.createElement("td");
-      tdNo.textContent = (i+1);
-      const tdName = document.createElement("td");
-      if(r.conditional){
-        const tag = document.createElement("span");
-        tag.className = "tag cond";
-        tag.textContent = "[조건부] ";
-        tdName.appendChild(tag);
-      }
-      tdName.appendChild(document.createTextNode(r.name));
-      const tdEvidence = document.createElement("td");
-      tdEvidence.textContent = r.evidence || "";
-      const tdOwned = document.createElement("td");
-      tdOwned.textContent = r.matched_owned || "(없음)";
-      const tdStatus = document.createElement("td");
-      const tag = document.createElement("span");
-      tag.className = "tag " + statusClass(r.status);
-      const dot = document.createElement("span");
-      dot.className = "dot";
-      tag.appendChild(dot);
-      tag.appendChild(document.createTextNode(" " + r.status));
-      tdStatus.appendChild(tag);
-      const tdQuestion = document.createElement("td");
-      tdQuestion.textContent = r.question || "—";
+  // 예시 공고로 해보기: 왼쪽 텍스트 채우고 바로 대조
+  sampleBtn.addEventListener("click", ()=>{ textEl.value = SAMPLE_NOTICE; runWithText(SAMPLE_NOTICE, readDocs()); });
+  runBtn.addEventListener("click", ()=>{ runWithText(textEl.value, readDocs()); });
 
-      if(["미충족","형식확인"].includes(r.status)){
-        const haveBtn = document.createElement("button");
-        haveBtn.textContent = "가지고 있음";
-        haveBtn.type = "button";
-        haveBtn.className = "ghost";
-        haveBtn.addEventListener("click", ()=>{
-          const docs = readDocs();
-          if(!docs.some(x=>x.name===r.name)){
-            const issued = prompt("발급일 (선택, YYYY-MM-DD):", "");
-            docs.push({ name: r.name, issued: issued && issued.trim() ? issued.trim() : null });
-            writeDocs(docs);
-            renderDocList(docs);
-          }
-          runWithText(textEl.value, readDocs());
-        });
-        const issuedRow = document.createElement("div");
-        issuedRow.style.cssText = "margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap";
-        const issuedLabel = document.createElement("label");
-        issuedLabel.textContent = "발급일 ";
-        const issuedInput = document.createElement("input");
-        issuedInput.type = "text";
-        issuedInput.placeholder = "YYYY-MM-DD";
-        issuedInput.style.cssText = "border:1px solid #b8b8b8;border-radius:4px;padding:5px 6px;font-size:12px";
-        issuedInput.maxLength = 10;
-        const setIssuedBtn = document.createElement("button");
-        setIssuedBtn.textContent = "설정";
-        setIssuedBtn.type = "button";
-        setIssuedBtn.style.cssText = "background:#1d4ed8;color:#fff;border:1px solid #1d4ed8;border-radius:4px;padding:5px 8px;cursor:pointer;font-size:12px";
-        setIssuedBtn.addEventListener("click", ()=>{
-          const docs = readDocs();
-          const item = docs.find(x=>x.name===r.name);
-          if(item){
-            item.issued = issuedInput.value.trim() || null;
-            writeDocs(docs);
-            renderDocList(docs);
-          }
-          runWithText(textEl.value, readDocs());
-        });
-        issuedRow.appendChild(issuedLabel);
-        issuedRow.appendChild(issuedInput);
-        issuedRow.appendChild(setIssuedBtn);
-        tdOwned.appendChild(document.createElement("br"));
-        tdOwned.appendChild(issuedRow);
-      }
-
-      tr.appendChild(tdNo);
-      tr.appendChild(tdName);
-      tr.appendChild(tdEvidence);
-      tr.appendChild(tdOwned);
-      tr.appendChild(tdStatus);
-      tr.appendChild(tdQuestion);
-      tbody.appendChild(tr);
-    }
-    const action = data.actionLines || {};
-    const prepare = Array.isArray(action.prepare) ? action.prepare.join(" · ") : (action.prepare || "없음");
-    const check = Array.isArray(action.check) ? action.check.join(" · ") : (action.check || "없음");
-    const deadline = action.deadline || "없음";
-    resultAction.textContent = "지금 준비할 서류: " + prepare + " / 지금 확인할 질문: " + check + " / 마감일: " + deadline;
-    resultDisclaimer.textContent = data.disclaimer || "";
-  }
-
-  runBtn.addEventListener("click", ()=>{
-    runWithText(textEl.value, readDocs());
-  });
-
-  sampleBtn.addEventListener("click", ()=>{
-    textEl.value = SAMPLE_NOTICE;
-    runWithText(SAMPLE_NOTICE, readDocs());
-  });
-
-  copyBtn.addEventListener("click", ()=>{
-    const summary = resultSummary.textContent;
-    const rows = Array.from(resultTable.querySelectorAll("tbody tr")).map(tr=>{
-      const cells = Array.from(tr.querySelectorAll("td")).map(td=>td.textContent);
-      return cells.join(" | ");
-    });
-    const header = "대조 결과";
-    const prepareMatch = resultAction.textContent.match(/지금 준비할 서류: (.+?) \/ 지금 확인할 질문/);
-    const checkMatch = resultAction.textContent.match(/지금 확인할 질문: (.+) \/ 마감일/);
-    const deadlineMatch = resultAction.textContent.match(/마감일: (.+)$/);
-    const lines = [
-      header,
-      summary,
-      "",
-      "요건 | 공고 원문 근거 | 보유 | 상태 | 확인 질문",
-    ].concat(rows).concat([
-      "",
-      "지금 준비할 서류: " + (prepareMatch ? prepareMatch[1] : ""),
-      "지금 확인할 질문: " + (checkMatch ? checkMatch[1] : ""),
-      "마감일: " + (deadlineMatch ? deadlineMatch[1] : ""),
-      "",
-      resultDisclaimer.textContent
-    ]);
-    const copyText = lines.join("\n");
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(copyText).then(()=>{
-        copyBtn.textContent = "복사됨";
-        setTimeout(()=>{ copyBtn.textContent = "결과 복사"; }, 1500);
-      }).catch(()=>{ fallbackCopy(copyText); });
+  docAddBtn.addEventListener("click", ()=>{
+    const name = prompt("서류명:");
+    if(!name || !name.trim()) return;
+    const issued = prompt("발급일 (선택, YYYY-MM-DD):", "");
+    const docs = readDocs();
+    docs.push({ name: name.trim(), issued: issued && issued.trim() ? issued.trim() : null });
+    writeDocs(docs);
+    if(currentTab === "compare" && currentResult){
+      renderDocList(docs, buildStatusesFromResult(currentResult));
     } else {
-      fallbackCopy(copyText);
+      renderDocList(docs, {});
     }
+    renderDocListDocs(docs);
   });
 
-  function fallbackCopy(text){
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      document.execCommand("copy");
-      copyBtn.textContent = "복사됨";
-      setTimeout(()=>{ copyBtn.textContent = "결과 복사"; }, 1500);
-    } catch(e){
-      alert("복사에 실패했습니다.");
-    }
-    document.body.removeChild(ta);
-  }
+  docResetBtn.addEventListener("click", ()=>{
+    if(!confirm("내 서류를 모두 삭제하시겠습니까?")) return;
+    writeDocs([]);
+    if(currentTab === "compare") renderDocList([], {});
+    renderDocListDocs([]);
+  });
 
-  renderDocList(readDocs());
+  docAddBtnDocs.addEventListener("click", ()=>{
+    const name = prompt("서류명:");
+    if(!name || !name.trim()) return;
+    const issued = prompt("발급일 (선택, YYYY-MM-DD):", "");
+    const docs = readDocs();
+    docs.push({ name: name.trim(), issued: issued && issued.trim() ? issued.trim() : null });
+    writeDocs(docs);
+    renderDocListDocs(docs);
+    if(currentTab === "compare") renderDocList(docs, buildStatusesFromResult(currentResult));
+  });
+
+  docResetBtnDocs.addEventListener("click", ()=>{
+    if(!confirm("내 서류를 모두 삭제하시겠습니까?")) return;
+    writeDocs([]);
+    renderDocListDocs([]);
+    if(currentTab === "compare") renderDocList([], {});
+  });
+
+  // 드래그앤드롭
+  ["dragenter","dragover","dragleave","drop"].forEach(n=>{
+    dropZone.addEventListener(n, e=>{ e.preventDefault(); e.stopPropagation(); }, false);
+  });
+  ["dragenter","dragover"].forEach(n=>{
+    dropZone.addEventListener(n, ()=>{ dropZone.classList.add("dragover"); }, false);
+  });
+  ["dragleave","drop"].forEach(n=>{
+    dropZone.addEventListener(n, ()=>{ dropZone.classList.remove("dragover"); }, false);
+  });
+  dropZone.addEventListener("drop", e=>{
+    const files = e.dataTransfer.files;
+    if(files.length){
+      const names = Array.from(files).map(f=>f.name).join(", ");
+      alert("'" + names + "' 등 " + files.length + "개의 파일이 드롭되었습니다. (UI 데모)");
+    } else {
+      alert("파일이 드롭되었습니다. (UI 데모)");
+    }
+  });
+  dropZone.addEventListener("click", ()=>{ alert("파일 탐색기가 열립니다. (클릭 데모)"); });
+
+  // 초기 렌더링
+  tabSwitch("compare");
 })();
 </script>
 </body>
