@@ -79,6 +79,9 @@
         <p class="text-sm font-medium text-gray-700 text-center">여기로 공고문 파일을 드래그 앤 드롭 하세요</p>
         <p class="text-xs text-gray-400 mt-1 text-center">PDF, JPG, PNG 파일 지원 (최대 10MB)</p>
       </div>
+      <p class="text-xs text-gray-400 mt-3 text-center">
+        * 이 결과는 공고 원문 대조 결과이며 자격 판정이 아닙니다.
+      </p>
       <div class="flex gap-3 mt-4">
         <button id="runBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition shadow-sm">
           대조하기
@@ -87,9 +90,6 @@
           예시 공고로 해보기
         </button>
       </div>
-      <p class="text-xs text-gray-400 mt-3 text-center">
-        * 이 결과는 공고 원문 대조 결과이며 자격 판정이 아닙니다.
-      </p>
     </div>
   </div>
 
@@ -189,8 +189,6 @@
   const sampleBtn = $("#sampleBtn");
   const docList = $("#docList");
   const docListDocs = $("#docListDocs");
-  const docAddBtn = $("#docAddBtn");
-  const docResetBtn = $("#docResetBtn");
   const docAddBtnDocs = $("#docAddBtnDocs");
   const docResetBtnDocs = $("#docResetBtnDocs");
   const docCountTag = $("#docCountTag");
@@ -601,28 +599,6 @@
   sampleBtn.addEventListener("click", ()=>{ textEl.value = SAMPLE_NOTICE; runWithText(SAMPLE_NOTICE, readDocs()); });
   runBtn.addEventListener("click", ()=>{ runWithText(textEl.value, readDocs()); });
 
-  docAddBtn.addEventListener("click", ()=>{
-    const name = prompt("서류명:");
-    if(!name || !name.trim()) return;
-    const issued = prompt("발급일 (선택, YYYY-MM-DD):", "");
-    const docs = readDocs();
-    docs.push({ name: name.trim(), issued: issued && issued.trim() ? issued.trim() : null });
-    writeDocs(docs);
-    if(currentTab === "compare" && currentResult){
-      renderDocList(docs, buildStatusesFromResult(currentResult));
-    } else {
-      renderDocList(docs, {});
-    }
-    renderDocListDocs(docs);
-  });
-
-  docResetBtn.addEventListener("click", ()=>{
-    if(!confirm("내 서류를 모두 삭제하시겠습니까?")) return;
-    writeDocs([]);
-    if(currentTab === "compare") renderDocList([], {});
-    renderDocListDocs([]);
-  });
-
   docAddBtnDocs.addEventListener("click", ()=>{
     const name = prompt("서류명:");
     if(!name || !name.trim()) return;
@@ -652,15 +628,63 @@
     dropZone.addEventListener(n, ()=>{ dropZone.classList.remove("dragover"); }, false);
   });
   dropZone.addEventListener("drop", e=>{
+    e.preventDefault();
+    e.stopPropagation();
     const files = e.dataTransfer.files;
     if(files.length){
-      const names = Array.from(files).map(f=>f.name).join(", ");
-      alert("'" + names + "' 등 " + files.length + "개의 파일이 드롭되었습니다. (UI 데모)");
+      const file = files[0];
+      if(!file.type.startsWith("application/pdf") && !file.type.startsWith("image/") && !file.name.match(/\.(pdf|jpg|jpeg|png|webp|docx|pptx|xlsx)$/i)){
+        showNotice("지원하지 않는 파일 형식입니다. PDF, JPG, PNG 등 공고문 파일을 업로드하세요.");
+        return;
+      }
+      uploadFileToParse(file);
     } else {
-      alert("파일이 드롭되었습니다. (UI 데모)");
+      showNotice("파일이 첨부되지 않았습니다.");
     }
   });
-  dropZone.addEventListener("click", ()=>{ alert("파일 탐색기가 열립니다. (클릭 데모)"); });
+  dropZone.addEventListener("click", ()=>{
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".pdf,.jpg,.jpeg,.png,.webp,.docx,.pptx,.xlsx";
+    input.onchange = ()=>{
+      const files = input.files;
+      if(files && files.length){
+        uploadFileToParse(files[0]);
+      }
+    };
+    input.click();
+  });
+
+  // 파일 업로드 → 파싱 → 텍스트 채우기
+  async function uploadFileToParse(file){
+    if(file.size > 4 * 1024 * 1024){
+      showNotice("파일 크기가 너무 큽니다. 최대 4MB까지 업로드할 수 있습니다.");
+      return;
+    }
+    dropZone.classList.add("dragover");
+    showNotice("문서를 파싱 중...");
+    try{
+      const formData = new FormData();
+      formData.append("document", file);
+      const response = await fetch("/api/parse", { method: "POST", body: formData });
+      const data = await response.json();
+      if(!response.ok){
+        showNotice(data.error || "문서 파싱에 실패했습니다.");
+        return;
+      }
+      if(!data.ok){
+        showNotice(data.detail || "문서 파싱 결과를 읽을 수 없습니다.");
+        return;
+      }
+      textEl.value = data.text;
+      $("#contrastSummary").textContent = "문서에서 " + (data.text || "").length + "자 추출됨. 결과를 확인하려면 '대조하기'를 누르세요.";
+      showNotice("문서 파싱 완료: " + (data.text || "").length + "자 추출됨");
+    }catch(err){
+      showNotice("문서 파싱 요청 중 오류가 발생했습니다.");
+    }finally{
+      dropZone.classList.remove("dragover");
+    }
+  }
 
   // 초기 렌더링
   tabSwitch("compare");

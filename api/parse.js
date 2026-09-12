@@ -1,0 +1,205 @@
+// api/parse.js — PDF 등 문서 파일을 받아 Document Parse로 텍스트를 추출
+//
+// 요청: POST /api/parse
+//  Content-Type: multipart/form-data
+//  본문 필드: document (PDF/JPG/PNG/DOCX 등)
+//
+// 응답: { ok: true, text: string, format: string } 또는 오류 응답
+//
+// Document Parse 엔드포인트:
+//  https://api.upstage.ai/v1/document-ai/document-parse
+//  인증: Authorization: Bearer {UPSTAGE_API_KEY}
+//  요청: multipart/form-data, 필드명 document
+
+const Busboy = require("busboy");
+const { PassThrough } = require("stream");
+
+const ALLOWED_METHODS = new Set(["POST"]);
+const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4MB (Vercel 함수 본문 제한 4.5MB를 고려해 여유)
+
+const DOCUMENT_PARSE_URL = "https://api.upstage.ai/v1/document-ai/document-parse";
+
+module.exports = async function (req, res) {
+  if (!ALLOWED_METHODS.has(req.method)) {
+    return res.status(405).json({ error: "허용되지 않은 메서드입니다." });
+  }
+
+  const contentType = (req.headers && req.headers["content-type"]) || "";
+  if (!contentType.toLowerCase().includes("multipart/form-data")) {
+    return res.status(400).json({ error: "파일 업로드는 multipart/form-data로 전송해야 합니다." });
+  }
+
+  let fileBuffer = null;
+  let fileName = null;
+  let fileMime = null;
+  let parseError = null;
+
+  const busboy = new Busboy({ headers: req.headers });
+
+  await new Promise((resolve, reject) => {
+    busboy.on("file", (fieldname, file, info) => {
+      if (fieldname !== "document") {
+        // 파일 필드가 아니면 스킵
+        file.resume();
+        return;
+      }
+
+      const chunks = [];
+      file.on("data", (chunk) => {
+        if (fileBuffer && fileBuffer.length + chunk.length > MAX_FILE_BYTES) {
+          parseError = "파일 크기가 너무 큽니다. (최대 4MB)";
+          file.destroy();
+          return;
+        }
+        chunks.push(chunk);
+      });
+
+      file.on("end", () => {
+        if (parseError) return;
+        fileBuffer = Buffer.concat(chunks);
+        fileName = info.filename || "upload";
+        fileMime = (info.mimeType || "").trim() || guessMimeFromName(fileName);
+      });
+
+      file.on("error", (err) => {
+        parseError = "파일 읽기 중 오류가 발생했습니다.";
+      });
+    });
+
+    busboy.on("error", (err) => {
+      parseError = "요청 파싱 중 오류가 발생했습니다.";
+    });
+
+    busboy.on("finish", () => {
+      resolve();
+    });
+
+    req.pipe(busboy);
+  });
+
+  if (parseError) {
+    return res.status(400).json({ error: parseError });
+  }
+
+  if (!fileBuffer || !fileBuffer.length) {
+    return res.status(400).json({ error: "파일이 첨부되지 않았습니다." });
+  }
+
+  const parsed = await callDocumentParse(fileBuffer, fileName, fileMime);
+  if (!parsed.ok) {
+    return res.status(parsed.status || 500).json({
+      error: parsed.detail || "문서 파싱에 실패했습니다.",
+      detail: parsed.detail,
+    });
+  }
+
+  return res.status(200).json({
+    ok: true,
+    text: parsed.text,
+    format: parsed.format,
+    filename: fileName,
+  });
+};
+
+// ---- Document Parse 호출 ----
+
+async function callDocumentParse(fileBuffer, fileName, fileMime) {
+  const apiKey = process.env.UPSTAGE_API_KEY;
+  if (!apiKey) {
+    return {
+      ok: false,
+      status: 500,
+      detail: "UPSTAGE_API_KEY가 등록되지 않았습니다.",
+    };
+  }
+
+  const form = new PassThrough();
+  const boundary = "----WebKitFormBoundary" + Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+  // multipart/form-data 본문을 직접 조립
+  const header = "--" + boundary + "\r\n" +
+    "Content-Disposition: form-data; name=\"document\"; filename=\"" + escapeHeader(fileName) + "\"\r\n" +
+    "Content-Type: " + (fileMime || "application/pdf") + "\r\n\r\n";
+
+  const footer = "\r\n--" + boundary + "--\r\n";
+
+  form.write(header);
+  form.write(fileBuffer);
+  form.end(footer);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 90000);
+
+  try {
+    const response = await fetch(DOCUMENT_PARSE_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + apiKey,
+        "Content-Type": "multipart/form-data; boundary=" + boundary,
+      },
+      body: form,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      return {
+        ok: false,
+        status: response.status,
+        detail: "Document Parse HTTP " + response.status + (text ? " — " + text.slice(0, 500) : ""),
+      };
+    }
+
+    const result = await response.json().catch(() => null);
+    if (!result || typeof result !== "object") {
+      return {
+        ok: false,
+        status: 502,
+        detail: "Document Parse 응답이 예상 형식이 아닙니다.",
+      };
+    }
+
+    // 응답은 보통 markdown 또는 html을 포함
+    const text = result.markdown || result.html || result.text || "";
+    const format = result.markdown ? "markdown" : result.html ? "html" : "unknown";
+
+    if (!text) {
+      return {
+        ok: false,
+        status: 502,
+        detail: "Document Parse 응답에 추출 텍스트가 없습니다.",
+      };
+    }
+
+    return { ok: true, text, format };
+  } catch (err) {
+    if (err && err.name === "AbortError") {
+      return { ok: false, status: 504, detail: "Document Parse 호출이 시간 초과되었습니다." };
+    }
+    return { ok: false, status: 500, detail: "Document Parse 호출 중 오류가 발생했습니다." };
+  }
+}
+
+// ---- helpers ----
+
+function escapeHeader(value) {
+  return String(value)
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n");
+}
+
+function guessMimeFromName(name) {
+  const lower = name.toLowerCase();
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (lower.endsWith(".pptx")) return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+  if (lower.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  return "application/octet-stream";
+}
