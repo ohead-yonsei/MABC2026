@@ -227,6 +227,7 @@
 
   // 왼쪽 패널 내 서류 목록을 상태에 따라 렌더링 (대조 결과 탭용)
   function renderDocList(docs, statuses){
+    if(!docList) return;
     docList.innerHTML = "";
     docCountTag.textContent = "내 서류: " + docs.length;
     if(!docs.length){
@@ -375,7 +376,6 @@
           arr[idx] = { name: newName.trim(), issued: newIssued && newIssued.trim() ? newIssued.trim() : null };
           writeDocs(arr);
           renderDocListDocs(readDocs());
-          if(currentTab === "compare") renderDocList(readDocs(), buildStatusesFromResult(currentResult));
         }
       });
       const delBtn = document.createElement("button");
@@ -386,7 +386,6 @@
         const next = readDocs().filter(x=>x!==d);
         writeDocs(next);
         renderDocListDocs(next);
-        if(currentTab === "compare") renderDocList(next, buildStatusesFromResult(currentResult));
       });
       right.appendChild(editBtn);
       right.appendChild(delBtn);
@@ -539,11 +538,6 @@
       rightPanel.classList.add("lg:col-span-1");
       rightResult.classList.add("active");
       rightDocs.classList.remove("active");
-      if(!currentResult){
-        renderDocList(readDocs(), {});
-      } else {
-        renderDocList(readDocs(), buildStatusesFromResult(currentResult));
-      }
       // 대비용: 필요 서류+보유 여부 전용 렌더
       renderContrastResult(currentResult);
     } else {
@@ -574,7 +568,14 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, owned: docs })
     })
-      .then(r=>r.json())
+      .then(r=>{
+        if(!r.ok){
+          runBtn.disabled = false;
+          showNotice("대조 결과 요청이 실패했습니다. (HTTP " + r.status + ")");
+          return Promise.reject(new Error("HTTP " + r.status));
+        }
+        return r.json();
+      })
       .then(data=>{
         runBtn.disabled = false;
         if(data.error || data.detail){
@@ -588,7 +589,6 @@
         currentResult = data;
         // 대조 결과 탭으로 전환
         tabSwitch("compare");
-        renderDocList(docs, buildStatusesFromResult(data));
       })
       .catch(err=>{
         runBtn.disabled = false;
@@ -608,14 +608,12 @@
     docs.push({ name: name.trim(), issued: issued && issued.trim() ? issued.trim() : null });
     writeDocs(docs);
     renderDocListDocs(docs);
-    if(currentTab === "compare") renderDocList(docs, buildStatusesFromResult(currentResult));
   });
 
   docResetBtnDocs.addEventListener("click", ()=>{
     if(!confirm("내 서류를 모두 삭제하시겠습니까?")) return;
     writeDocs([]);
     renderDocListDocs([]);
-    if(currentTab === "compare") renderDocList([], {});
   });
 
   // 드래그앤드롭
