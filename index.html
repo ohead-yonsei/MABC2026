@@ -29,6 +29,10 @@
   #right-docs{min-height:320px}
   #right-result{min-height:320px}
   .result-foot{margin-top:12px;padding-top:10px;border-top:1px solid #e5e7eb;color:#555;font-size:13px}
+  /* 로딩 스피너 */
+  .btn-spinner{width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;display:inline-block;margin-right:8px;vertical-align:middle;animation:spin 0.7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .btn-loading{pointer-events:none;opacity:0.85}
   /* 레이아웃 안정화 */
   main.grid-layout{display:grid;grid-template-columns:1fr;gap:2rem;min-width:0}
   @media (min-width:1024px){
@@ -83,13 +87,15 @@
         * 이 결과는 공고 원문 대조 결과이며 자격 판정이 아닙니다.
       </p>
       <div class="flex gap-3 mt-4">
-        <button id="runBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition shadow-sm">
-          대조하기
+        <button id="runBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition shadow-sm flex items-center justify-center">
+          <span id="runBtnText">대조하기</span>
+          <span id="runBtnSpinner" class="btn-spinner" style="display:none"></span>
         </button>
         <button id="sampleBtn" class="px-5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2.5 rounded-lg transition shadow-sm">
           예시 공고로 해보기
         </button>
       </div>
+      <div id="runStatus" class="mt-3 text-xs text-gray-500 text-center min-h-[18px]"></div>
     </div>
   </div>
 
@@ -561,6 +567,9 @@
   function runWithText(text, docs){
     if(!text.trim()){ showNotice("공고문을 붙여넣어 주세요."); return; }
     runBtn.disabled = true;
+    runBtnText.textContent = "대조 중";
+    runBtnSpinner.style.display = "inline-block";
+    setRunStatus("서버에 대조 요청을 보내는 중...");
     currentResult = null;
     if(!noticeEl) showNotice("");
     fetch("/api/check", {
@@ -571,29 +580,56 @@
       .then(r=>{
         if(!r.ok){
           runBtn.disabled = false;
+          runBtnText.textContent = "대조하기";
+          runBtnSpinner.style.display = "none";
+          setRunStatus("");
           showNotice("대조 결과 요청이 실패했습니다. (HTTP " + r.status + ")");
           return Promise.reject(new Error("HTTP " + r.status));
         }
+        setRunStatus("Solar Pro 4가 공고문에서 제출 요건을 추출 중...");
         return r.json();
       })
       .then(data=>{
         runBtn.disabled = false;
+        runBtnText.textContent = "대조하기";
+        runBtnSpinner.style.display = "none";
         if(data.error || data.detail){
+          setRunStatus("");
           showNotice(data.error + " " + (data.detail||""));
           return;
         }
         if(data.notice){
+          setRunStatus("");
           showNotice(data.notice);
           return;
         }
+        setRunStatus("추출한 요건과 보유 서류를 대조 중...");
         currentResult = data;
         // 대조 결과 탭으로 전환
         tabSwitch("compare");
+        setRunStatus("");
       })
       .catch(err=>{
         runBtn.disabled = false;
+        runBtnText.textContent = "대조하기";
+        runBtnSpinner.style.display = "none";
+        setRunStatus("");
         showNotice("대조 결과를 가져올 수 없습니다. 다시 시도해 주세요.");
       });
+  }
+
+  function setRunStatus(msg){
+    const el = $("#runStatus");
+    if(!el) return;
+    if(msg){
+      el.textContent = msg;
+      el.classList.remove("text-gray-400");
+      el.classList.add("text-blue-600", "font-medium");
+    } else {
+      el.textContent = "";
+      el.classList.remove("text-blue-600", "font-medium");
+      el.classList.add("text-gray-400");
+    }
   }
 
   // 예시 공고로 해보기: 왼쪽 텍스트 채우고 바로 대조
