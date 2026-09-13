@@ -427,7 +427,7 @@
       noticeEl = el;
     }
     noticeEl.textContent = msg;
-    noticeEl.style.display = "block";
+    noticeEl.style.display = msg ? "block" : "none";
   }
 
   // 열람: 카드 클릭 시 오른쪽 미리보기
