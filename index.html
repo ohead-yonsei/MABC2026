@@ -477,7 +477,7 @@
     for(const row of rows){
       const r = document.createElement("div");
       r.className = "border border-gray-100 rounded-lg p-4";
-      const needNorm = normalizeName(row.needName || row.need || "");
+      const needNorm = normalizeName(row.name || "");
       const isOwn = ownedNorms.has(needNorm);
       if(!isOwn) needCount++;
       else haveCount++;
@@ -487,7 +487,7 @@
 
       const name = document.createElement("div");
       name.className = "font-medium";
-      name.textContent = row.needName || row.need;
+      name.textContent = row.name;
       head.appendChild(name);
 
       const badge = document.createElement("span");
