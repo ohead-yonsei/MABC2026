@@ -111,7 +111,9 @@
           <div id="docCountTag" class="text-sm text-gray-500">내 서류: 0</div>
         </div>
 
-        <div id="contrastList" class="flex flex-col gap-3 flex-grow overflow-y-auto pr-1"></div>
+        <div id="contrastList" class="flex flex-col gap-3 flex-grow overflow-y-auto pr-1">
+          <p class="text-sm text-gray-400">공고문을 입력하고 ‘대조하기’ 버튼을 누르면 제출 요건 대조 결과가 여기에 표시됩니다.</p>
+        </div>
 
         <div id="contrastSummary" class="text-sm text-gray-500 mb-3">대조할 수 있는 서류가 없습니다. ‘내 서류함’에서 서류를 추가하세요.</div>
       </div>
@@ -467,6 +469,11 @@
   function renderContrastResult(result){
     const rows = result && result.rows ? result.rows : [];
     const list = $("#contrastList");
+    if(!result){
+      // 최초 상태: 안내 문구는 HTML에 맡겨두고 요약만 정리
+      $("#contrastSummary").textContent = "아직 대조한 공고가 없습니다.";
+      return;
+    }
     if(!rows.length){
       list.innerHTML = "<p class='text-sm text-gray-400'>대조 결과가 없습니다.</p>";
       $("#contrastSummary").textContent = "대조 결과가 없습니다.";
