@@ -587,7 +587,10 @@
           return Promise.reject(new Error("HTTP " + r.status));
         }
         setRunStatus("Solar Pro 4가 공고문에서 제출 요건을 추출 중...");
-        return r.json();
+        return r.json().then(data=>{
+          // 실제 호출과 별개로 잠깐 대기해 중간 상태가 보이도록 함
+          return new Promise(resolve=>setTimeout(resolve, 900)).then(()=>data);
+        });
       })
       .then(data=>{
         runBtn.disabled = false;
@@ -606,8 +609,11 @@
         setRunStatus("추출한 요건과 보유 서류를 대조 중...");
         currentResult = data;
         // 대조 결과 탭으로 전환
-        tabSwitch("compare");
-        setRunStatus("");
+        return new Promise(resolve=>setTimeout(resolve, 500)).then(()=>{
+          tabSwitch("compare");
+          setRunStatus("");
+          return data;
+        });
       })
       .catch(err=>{
         runBtn.disabled = false;
