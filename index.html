@@ -467,21 +467,19 @@
 
   // 대비용: 필요 서류+보유 여부 전용 렌더
   function renderContrastResult(result){
-    const rows = result && result.rows ? result.rows : [];
+    const ownedNames = readDocs().map(d=>d.name);
+    const ownedNorms = new Set(ownedNames.map(normalizeName));
     const list = $("#contrastList");
-    if(!result){
-      // 최초 상태: 안내 문구는 HTML에 맡겨두고 요약만 정리
-      $("#contrastSummary").textContent = "아직 대조한 공고가 없습니다.";
-      return;
-    }
-    if(!rows.length){
-      list.innerHTML = "<p class='text-sm text-gray-400'>대조 결과가 없습니다.</p>";
+    if(!result || !result.rows || !result.rows.length){
+      // 실제 대조 결과가 없는 경우: 필요 서류 없음/추출 안 됨 등을 구분 표시가 아니라 간단히 안내
+      list.innerHTML = "<p class='text-sm text-gray-400'>" + (result && result.rows && result.rows.length === 0
+        ? "이 공고문에서는 필수·구비 서류로 추출된 항목이 없습니다."
+        : "대조 결과가 없습니다. 공고문을 다시 확인해 주세요.") + "</p>";
       $("#contrastSummary").textContent = "대조 결과가 없습니다.";
       return;
     }
 
-    const ownedNames = readDocs().map(d=>d.name);
-    const ownedNorms = new Set(ownedNames.map(normalizeName));
+    const rows = result.rows;
 
     list.innerHTML = "";
     let needCount = 0;
