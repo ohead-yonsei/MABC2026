@@ -568,12 +568,16 @@
       renderContrastResult(currentResult);
     } else if(tab === "docs"){
       leftPanel.classList.add("hidden");
+      centerPanel.classList.add("lg:col-span-2");
+      centerPanel.classList.remove("lg:col-span-1");
       centerCompare.classList.remove("active");
       centerDocs.classList.add("active");
       centerIntro.classList.remove("active");
       renderDocListDocs(readDocs());
     } else {
       leftPanel.classList.add("hidden");
+      centerPanel.classList.add("lg:col-span-2");
+      centerPanel.classList.remove("lg:col-span-1");
       centerCompare.classList.remove("active");
       centerDocs.classList.remove("active");
       centerIntro.classList.add("active");
