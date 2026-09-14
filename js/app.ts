@@ -14,7 +14,7 @@
 
 3. 접수 기한: 2026년 9월 15일(화) 18:00까지 온라인 접수`;
 
-  const $ = (s: string): Element | null => document.querySelector(s);
+  const $ = (s)=>document.querySelector(s);
   const textEl = $("#text");
   const runBtn = $("#runBtn");
   const sampleBtn = $("#sampleBtn");
@@ -46,24 +46,16 @@
 
   const STORAGE_KEY_DOCS = "mfc_docs_v1";
 
-  function readDocs(): Doc[] {
+  function readDocs(){
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY_DOCS) || "[]"); } catch(e){ return []; }
   }
-  function writeDocs(docs: Doc[]): void { try { localStorage.setItem(STORAGE_KEY_DOCS, JSON.stringify(docs)); } catch(e){} }
+  function writeDocs(docs){ try { localStorage.setItem(STORAGE_KEY_DOCS, JSON.stringify(docs)); } catch(e){} }
 
   function normalizeName(name){
     return name.toLowerCase().trim().replace(/[\s\-()[]]/g, "");
   }
 
-  interface Doc {
-  name: string;
-  issued: string | null;
-  regDate: string | null;
-  modDate: string | null;
-}
-
-function isPublicDocument(name){
-function isPublicDocument(name){
+  function isPublicDocument(name){
     const n = name.toLowerCase();
     return /\b(증명서|확인증|신고증|등록증|허가증|확인서|확인서|등본|초본|납세증명|자격확인|인허가|신고필증)\b/.test(n);
   }
@@ -272,14 +264,14 @@ function isPublicDocument(name){
     // 상세 카드에 서류 정보 표시
     const now = new Date().toLocaleString("ko-KR");
     detailContent.classList.remove("hidden");
-    detailContent.innerHTML = "
+    detailContent.innerHTML = `
       <div class="flex justify-between items-start gap-3 mb-3">
         <div>
           <p class="text-sm text-gray-400">선택한 서류</p>
-          <p class="font-semibold text-lg mt-1">" + escapeHtml(doc.name) + "</p>
-          <p class="text-sm text-gray-500 mt-1">" + (doc.issued ? "발급일: " + doc.issued : "발급일 없음") + "</p>
-          <p class="text-sm text-gray-400 mt-1">등록: " + (doc.regDate ? doc.regDate : now) + "</p>
-          <p class="text-sm text-gray-400 mt-1">최종 수정: " + now + "</p>
+          <p class="font-semibold text-lg mt-1">${escapeHtml(doc.name)}</p>
+          <p class="text-sm text-gray-500 mt-1">${(doc.issued ? "발급일: " + doc.issued : "발급일 없음")}</p>
+          <p class="text-sm text-gray-400 mt-1">등록: ${doc.regDate ? doc.regDate : now}</p>
+          <p class="text-sm text-gray-400 mt-1">최종 수정: ${now}</p>
         </div>
       </div>
       <div class="flex gap-2 mb-3">
@@ -287,7 +279,7 @@ function isPublicDocument(name){
         <button id="previewDeleteBtn" class="text-sm text-red-600 hover:text-red-800">삭제</button>
       </div>
       <button id="previewCloseBtn" class="text-sm text-gray-500 hover:text-gray-800">닫기</button>
-    ";
+    `;
 
     document.getElementById("previewEditBtn").onclick = ()=>{
       const newName = prompt("서류명:", doc.name);
@@ -370,12 +362,12 @@ function isPublicDocument(name){
           badge.textContent = "가지고 있음(보유 확인 필요)";
         }
       } else {
-        if(row.status === "형식확인"){
-          badge.classList.add("bg-yellow-100", "text-yellow-700");
-          badge.textContent = "필요함(형식 확인 필요)";
-        } else if(row.status === "판단불가"){
+        if(row.status === "판단불가"){
           badge.classList.add("bg-gray-100", "text-gray-600");
           badge.textContent = "판단 불가";
+        } else if(row.status === "형식확인"){
+          badge.classList.add("bg-yellow-100", "text-yellow-700");
+          badge.textContent = "필요함(형식 확인 필요)";
         } else {
           badge.classList.add("bg-red-100", "text-red-700");
           badge.textContent = "필요함";
@@ -576,12 +568,16 @@ function isPublicDocument(name){
       renderContrastResult(currentResult);
     } else if(tab === "docs"){
       leftPanel.classList.add("hidden");
+      centerPanel.classList.add("lg:col-span-2");
+      centerPanel.classList.remove("lg:col-span-1");
       centerCompare.classList.remove("active");
       centerDocs.classList.add("active");
       centerIntro.classList.remove("active");
       renderDocListDocs(readDocs());
     } else {
       leftPanel.classList.add("hidden");
+      centerPanel.classList.add("lg:col-span-2");
+      centerPanel.classList.remove("lg:col-span-1");
       centerCompare.classList.remove("active");
       centerDocs.classList.remove("active");
       centerIntro.classList.add("active");

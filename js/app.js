@@ -264,14 +264,14 @@
     // 상세 카드에 서류 정보 표시
     const now = new Date().toLocaleString("ko-KR");
     detailContent.classList.remove("hidden");
-    detailContent.innerHTML = "
+    detailContent.innerHTML = `
       <div class="flex justify-between items-start gap-3 mb-3">
         <div>
           <p class="text-sm text-gray-400">선택한 서류</p>
-          <p class="font-semibold text-lg mt-1">" + escapeHtml(doc.name) + "</p>
-          <p class="text-sm text-gray-500 mt-1">" + (doc.issued ? "발급일: " + doc.issued : "발급일 없음") + "</p>
-          <p class="text-sm text-gray-400 mt-1">등록: " + (doc.regDate ? doc.regDate : now) + "</p>
-          <p class="text-sm text-gray-400 mt-1">최종 수정: " + now + "</p>
+          <p class="font-semibold text-lg mt-1">${escapeHtml(doc.name)}</p>
+          <p class="text-sm text-gray-500 mt-1">${(doc.issued ? "발급일: " + doc.issued : "발급일 없음")}</p>
+          <p class="text-sm text-gray-400 mt-1">등록: ${doc.regDate ? doc.regDate : now}</p>
+          <p class="text-sm text-gray-400 mt-1">최종 수정: ${now}</p>
         </div>
       </div>
       <div class="flex gap-2 mb-3">
@@ -279,7 +279,7 @@
         <button id="previewDeleteBtn" class="text-sm text-red-600 hover:text-red-800">삭제</button>
       </div>
       <button id="previewCloseBtn" class="text-sm text-gray-500 hover:text-gray-800">닫기</button>
-    ";
+    `;
 
     document.getElementById("previewEditBtn").onclick = ()=>{
       const newName = prompt("서류명:", doc.name);
