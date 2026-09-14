@@ -116,6 +116,7 @@
         </div>
 
         <div id="contrastSummary" class="text-sm text-gray-500 mb-3">대조할 수 있는 서류가 없습니다. ‘내 서류함’에서 서류를 추가하세요.</div>
+        <div id="contrastDetail" class="bg-gray-50 rounded-lg border border-gray-200 p-4 mt-3 hidden"></div>
       </div>
     </div>
 
@@ -476,6 +477,8 @@
         ? "이 공고문에서는 필수·구비 서류로 추출된 항목이 없습니다."
         : "대조 결과가 없습니다. 공고문을 다시 확인해 주세요.") + "</p>";
       $("#contrastSummary").textContent = "대조 결과가 없습니다.";
+      const detailEl = document.getElementById("contrastDetail");
+      if(detailEl) detailEl.classList.add("hidden");
       return;
     }
 
@@ -572,6 +575,10 @@
       }
       r.appendChild(sub);
 
+      r.onclick = () => showContrastDetail(row, isOwn);
+      r.style.cursor = "pointer";
+      r.title = rowExplain(row, isOwn);
+
       list.appendChild(r);
     }
 
@@ -581,7 +588,120 @@
     $("#docCountTag").textContent = "내 서류: " + ownedNames.length;
   }
 
-  let currentTab = "compare";
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]||c));
+  }
+
+  function rowExplain(row, isOwn){
+    const status = row.status || "";
+    const name = (row.name || "").trim();
+    const evidence = (row.evidence || "").trim();
+    const fmt = (row.format_note || "").trim();
+    const condInfo = (row.conditional_info || "").trim();
+
+    const hasEvidence = evidence.length > 0;
+    const genericDoc = /지원신청|신청서|사업신청서|참가신청서|등록신청서|가입신청서|지급신청서|확인서\s*신청|신고서/i.test(name);
+
+    let lines = [];
+    if(genericDoc){
+      lines.push("서류명만 대조한 결과라 내부 서식·양식은 별도 확인이 필요합니다.");
+    }
+    if(status === "충족"){
+      lines.push(isOwn ? "보유하고 계신 서류와 공고 요건을 대조한 결과, 충족된 것으로 판단됩니다." : "보유 서류 기준 충족으로 판정되었습니다.");
+    } else if(status === "형식확인"){
+      if(isOwn){
+        lines.push(fmt ? ("보유하신 " + escapeHtml(name) + "가 공고에서 요구하는 " + escapeHtml(fmt) + " 조건을 만족하는지 확인이 필요합니다.") : "보유 서류와 공고 요건 서류의 동일 여부/형식 확인이 필요합니다.");
+        if(!hasEvidence){
+          lines.push("서류명만 대조한 결과라 형식 확인이 필요합니다.");
+        }
+      } else {
+        lines.push(fmt ? ("해당 서류는 " + escapeHtml(fmt) + " 조건을 확인해야 합니다.") : "해당 서류의 형식 확인이 필요합니다.");
+        if(!hasEvidence){
+          lines.push("서류명만 대조한 결과라 형식 확인 필요입니다.");
+        }
+      }
+    } else if(status === "판단불가"){
+      if(condInfo){
+        lines.push(condInfo + "에 해당하는지 확인이 필요합니다.");
+      } else {
+        lines.push("요건을 특정할 수 없어 판단이 어렵습니다.");
+      }
+    } else {
+      lines.push("현재 보유 서류에는 없는 제출 요건입니다.");
+    }
+    return lines.join(" ");
+  }
+
+  function showContrastDetail(row, isOwn){
+    const d = document.getElementById("contrastDetail");
+    if(!d) return;
+    const status = row.status || "";
+    const name = (row.name || "").trim();
+    const evidence = (row.evidence || "").trim();
+    const fmt = (row.format_note || "").trim();
+    const condInfo = (row.conditional_info || "").trim();
+
+    const hasEvidence = evidence.length > 0;
+    const genericDoc = /지원신청|신청서|사업신청서|참가신청서|등록신청서|가입신청서|지급신청서|확인서\s*신청|신고서/i.test(name);
+    const owned = readDocs() || [];
+    const ownMatch = owned.filter(o => normalizeName(o.name) === normalizeName(name));
+
+    const parts = [];
+
+    parts.push("<div class='flex justify-between gap-2 items-start'>");
+    parts.push("<div class='font-medium text-gray-900'>" + escapeHtml(name) + "</div>");
+
+    const badgeCls = status === "충족" ? "bg-green-100 text-green-700" :
+      status === "형식확인" ? "bg-yellow-100 text-yellow-700" :
+      status === "판단불가" ? "bg-gray-100 text-gray-600" : "bg-red-100 text-red-700";
+    const badgeText = isOwn
+      ? (status === "충족" ? "가지고 있음(충족)" : status === "형식확인" ? "가지고 있음(형식 확인 필요)" : status === "판단불가" ? "가지고 있음(판단 불가)" : "가지고 있음(보유 확인 필요)")
+      : (status === "판단불가" ? "판단 불가" : status === "형식확인" ? "필요함(형식 확인 필요)" : "필요함");
+    parts.push("<span class='text-xs px-2 py-0.5 rounded " + badgeCls + "'>" + escapeHtml(badgeText) + "</span>");
+    parts.push("</div>");
+
+    if(ownMatch.length){
+      parts.push("<div class='mt-3 text-sm'><span class='font-medium text-gray-700'>보유 서류:</span>");
+      parts.push("<ul class='mt-1 space-y-1'>");
+      for(const o of ownMatch){
+        parts.push("<li>" + escapeHtml((o.name||"").trim()) + (o.issuedAt ? " (발급일: " + escapeHtml(o.issuedAt) + ")" : "") + "</li>");
+      }
+      parts.push("</ul></div>");
+    } else if(isOwn){
+      parts.push("<div class='mt-2 text-sm text-gray-600'>보유 서류 목록에 같은 이름의 서류가 없습니다.</div>");
+    }
+
+    parts.push("<div class='mt-3 text-sm'>");
+    parts.push("<span class='font-medium text-gray-700'>판단 이유:</span> ");
+    parts.push(escapeHtml(rowExplain(row, isOwn)));
+    parts.push("</div>");
+
+    if(fmt || condInfo){
+      parts.push("<div class='mt-2 text-sm'>");
+      parts.push("<span class='font-medium text-gray-700'>확인할 내용:</span> ");
+      const checkParts = []
+        .concat(fmt ? [fmt + " 조건 확인"] : [])
+        .concat(condInfo ? [condInfo] : [])
+        .filter(Boolean);
+      parts.push(escapeHtml(checkParts.join(" / ") || "요건 확인 필요"));
+      parts.push("</div>");
+    }
+
+    if(!hasEvidence){
+      parts.push("<div class='mt-2 text-sm text-gray-600'>공고 원문 근거가 확인되지 않아, 서류명만 대조한 결과입니다. 실제 공고문에서 해당 요건의 정확한 내용을 함께 확인하시기 바랍니다.</div>");
+    }
+
+    if(genericDoc){
+      parts.push("<div class='mt-3'>");
+      parts.push("<span class='inline-flex items-center gap-1.5 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2'><svg class='w-4 h-4 text-amber-600' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'><path stroke-linecap='round' stroke-linejoin='round' d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z'/></svg><span class='font-medium'>내부 서식 확인 필요</span></span>");
+      parts.push("<div class='mt-2 text-sm text-amber-900'>" + escapeHtml(name) + "는 제목만으로는 실제 제출 서류의 내용·양식·서식을 알 수 없는 범용 서류입니다. 공고문에 첨부된 서식·양식 예시와 보유 서류의 내부를 직접 비교해 보시고, 일치하지 않으면 형식 확인이 필요합니다.</div>");
+      parts.push("</div>");
+    }
+
+    d.innerHTML = parts.join("");
+    d.classList.remove("hidden");
+  }
+
   let currentResult = null;
 
   function buildStatusesFromResult(result){
