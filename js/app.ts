@@ -370,12 +370,12 @@ function isPublicDocument(name){
           badge.textContent = "가지고 있음(보유 확인 필요)";
         }
       } else {
-        if(row.status === "판단불가"){
-          badge.classList.add("bg-gray-100", "text-gray-600");
-          badge.textContent = "판단 불가";
-        } else if(row.status === "형식확인"){
+        if(row.status === "형식확인"){
           badge.classList.add("bg-yellow-100", "text-yellow-700");
           badge.textContent = "필요함(형식 확인 필요)";
+        } else if(row.status === "판단불가"){
+          badge.classList.add("bg-gray-100", "text-gray-600");
+          badge.textContent = "판단 불가";
         } else {
           badge.classList.add("bg-red-100", "text-red-700");
           badge.textContent = "필요함";
