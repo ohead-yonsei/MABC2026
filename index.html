@@ -164,7 +164,7 @@
             <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold shrink-0">1</div>
             <div class="flex-1">
               <h3 class="font-semibold text-gray-900 text-sm">공고문을 준비하세요</h3>
-              <p class="text-sm text-gray-600 mt-1">정부 지원사업 공고문에서 '제출 서류' 부분을 찾아 복사합니다.</p>
+              <p class="text-sm text-gray-600 mt-1">정부 지원사업 공고문을 복사하거나 공모 요강 파일을 붙여넣습니다.</p>
               <div class="mt-3 p-3 bg-gray-100 rounded-lg text-xs text-gray-700 font-mono whitespace-pre-wrap">
 예시: "2. 제출 서류
   가. 지원신청서(별지 제1호 서식) 1부
@@ -205,33 +205,6 @@
           </div>
         </div>
 
-        <!-- 평가 항목 안내 -->
-        <div class="mt-5 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <h3 class="font-semibold text-gray-900 text-sm mb-3">📊 평가 항목 및 배점</h3>
-          <div class="text-xs text-gray-600 space-y-2">
-            <div class="flex justify-between">
-              <span>공고문 제출요건 추출 정확도</span>
-              <span class="font-medium">30점</span>
-            </div>
-            <div class="flex justify-between">
-              <span>보유 서류와의 대조 정확성</span>
-              <span class="font-medium">25점</span>
-            </div>
-            <div class="flex justify-between">
-              <span>상태 판별(충족/형식확인/판단불가/미충족)</span>
-              <span class="font-medium">20점</span>
-            </div>
-            <div class="flex justify-between">
-              <span>사용자 인터페이스 편의성</span>
-              <span class="font-medium">15점</span>
-            </div>
-            <div class="flex justify-between">
-              <span>결과 설명의 명확성</span>
-              <span class="font-medium">10점</span>
-            </div>
-          </div>
-        </div>
-
         <!-- 다음 버튼 -->
         <div class="mt-5 flex gap-3">
           <button id="onboardingNextBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition shadow-sm">
@@ -252,9 +225,7 @@
         </h2>
         <button id="detailCloseBtn" class="text-sm text-gray-400 hover:text-gray-600">닫기</button>
       </div>
-      <div id="detailContent" class="text-sm text-gray-400">
-        서류나 요건을 선택하면 여기에 상세 정보가 표시됩니다.
-      </div>
+      <div id="detailContent" class="text-sm text-gray-400"></div>
     </div>
   </div>
 </div>
