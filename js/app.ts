@@ -492,9 +492,14 @@
     parts.push("<div class='flex justify-between items-start gap-2'>");
     parts.push("<div class='font-medium text-gray-900'>" + escapeHtml(name) + "</div>");
 
-    const badgeCls = status === "충족" ? "bg-green-100 text-green-700" :
-      status === "형식확인" ? "bg-yellow-100 text-yellow-700" :
-      status === "판단불가" ? "bg-gray-100 text-gray-600" : "bg-red-100 text-red-700";
+    const badgeCls = isOwn
+      ? (status === "충족" ? "bg-green-100 text-green-700" :
+         status === "형식확인" ? "bg-yellow-100 text-yellow-700" :
+         status === "판단불가" ? "bg-gray-100 text-gray-600" :
+         "bg-red-100 text-red-700")
+      : (status === "판단불가" ? "bg-gray-100 text-gray-600" :
+         status === "형식확인" ? "bg-yellow-100 text-yellow-700" :
+         "bg-red-100 text-red-700");
     const badgeText = isOwn
       ? (status === "충족" ? "가지고 있음(충족)" : status === "형식확인" ? "가지고 있음(형식 확인 필요)" : status === "판단불가" ? "가지고 있음(판단 불가)" : "가지고 있음(보유 확인 필요)")
       : (status === "판단불가" ? "판단 불가" : status === "형식확인" ? "필요함(형식 확인 필요)" : "필요함");
@@ -715,7 +720,10 @@
   runBtn.addEventListener("click", ()=>{ runWithText(textEl.value, readDocs()); });
 
   docAddBtnDocs.addEventListener("click", ()=>{
+    const name = prompt("서류명:", "");
     if(!name || !name.trim()) return;
+    const issued = prompt("발급일 (선택, YYYY-MM-DD):", "");
+    const docs = readDocs();
     docs.push({ name: name.trim(), issued: issued && issued.trim() ? issued.trim() : null });
     writeDocs(docs);
     renderDocListDocs(docs);
