@@ -272,21 +272,29 @@
       <button id="previewCloseBtn" class="text-sm text-gray-500 hover:text-gray-800">닫기</button>
     `;
 
-    document.getElementById("previewEditBtn").onclick = ()=>{
-      if(!newName || !newName.trim()) return;
-      if(idx >= 0){
-        docs[idx] = { name: newName.trim(), issued: newIssued && newIssued.trim() || null, regDate: docs[idx].regDate || new Date().toLocaleString("ko-KR"), modDate: now };
-        writeDocs(docs);
-        renderDocListDocs(docs);
+    // 편집/삭제는 실제 docs 배열에서 이 doc을 찾아 처리
+    (function(docToEdit){
+      document.getElementById("previewEditBtn").onclick = ()=>{
+        const newName = prompt("서류명:", docToEdit.name);
+        if(!newName || !newName.trim()) return;
+        const docs = readDocs();
+        const idx = docs.indexOf(docToEdit);
+        if(idx >= 0){
+          docs[idx] = { name: newName.trim(), issued: docToEdit.issued, regDate: docToEdit.regDate || new Date().toLocaleString("ko-KR"), modDate: now };
+          writeDocs(docs);
+          renderDocListDocs(docs);
+          detailModal.style.display = "none";
+        }
+      };
+      document.getElementById("previewDeleteBtn").onclick = ()=>{
+        if(!confirm("'" + docToEdit.name + "'을(를) 삭제하시겠습니까?")) return;
+        const docs = readDocs();
+        const next = docs.filter(d => d !== docToEdit);
+        writeDocs(next);
+        renderDocListDocs(next);
         detailModal.style.display = "none";
-      }
-    };
-    document.getElementById("previewDeleteBtn").onclick = ()=>{
-      if(!confirm("'" + doc.name + "'을(를) 삭제하시겠습니까?")) return;
-      writeDocs(next);
-      renderDocListDocs(next);
-      detailModal.style.display = "none";
-    };
+      };
+    })(doc);
     $("#previewCloseBtn").onclick = ()=> detailModal.style.display = "none";
   }
 
