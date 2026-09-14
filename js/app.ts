@@ -644,9 +644,19 @@
         runBtnText.textContent = "대조하기";
         runBtnSpinner.style.display = "none";
         setRunStatus("");
+        hideLoading();
         showNotice("대조 결과를 가져올 수 없습니다. 다시 시도해 주세요.");
       });
   }
+
+  // 로딩 메시지 사이클링 (계속 돌아가며 순서대로 표시)
+  let loadingInterval = null;
+  const loadingMessages = [
+    { title: "서버에 대조 요청을 보내는 중...", sub: "공고문을 분석하고 있습니다." },
+    { title: "Solar Pro 4가 분석 중...", sub: "공고문에서 제출 요건을 추출하고 있습니다." },
+    { title: "요건과 서류를 대조 중...", sub: "보유 서류와 하나씩 비교하고 있습니다." }
+  ];
+  let loadingIndex = 0;
 
   function showLoading(msg, sub){
     const ov = document.getElementById("loadingOverlay");
@@ -654,13 +664,22 @@
     ov.classList.remove("hidden");
     const t = document.getElementById("loaderTitle");
     const s = document.getElementById("loaderSub");
-    if(t) t.textContent = msg;
-    if(s) s.textContent = sub || "";
+    // 첫 메시지는 호출 시 전달된 것, 이후 사이클링
+    if(t) t.textContent = msg || loadingMessages[0].title;
+    if(s) s.textContent = sub || loadingMessages[0].sub;
+    if(loadingInterval){ clearInterval(loadingInterval); }
+    loadingIndex = 0;
+    loadingInterval = setInterval(()=>{
+      loadingIndex = (loadingIndex + 1) % loadingMessages.length;
+      if(t) t.textContent = loadingMessages[loadingIndex].title;
+      if(s) s.textContent = loadingMessages[loadingIndex].sub;
+    }, 1500);
   }
   function hideLoading(){
     const ov = document.getElementById("loadingOverlay");
     if(!ov) return;
     ov.classList.add("hidden");
+    if(loadingInterval){ clearInterval(loadingInterval); loadingInterval = null; }
   }
 
   function setRunStatus(msg){
