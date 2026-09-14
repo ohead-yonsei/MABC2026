@@ -30,9 +30,10 @@
   const centerDocs = $("#center-docs");
   const centerIntro = $("#center-intro");
   const centerPanel = $("#center-panel");
-  const rightPanel = document.querySelector(".right-panel");
-  const detailContent = $("#detailContent");
-  const detailCloseBtn = $("#detailCloseBtn");
+  const detailModal = $("#detailModal");
+  const detailModalContent = $("#detailModalContent");
+  const detailModalCloseBtn = $("#detailModalCloseBtn");
+  const detailModalBackdrop = $("#detailModalBackdrop");
   const tabCompare = $("#tab-compare");
   const tabDocs = $("#tab-docs");
   const tabIntro = $("#tab-intro");
@@ -166,7 +167,6 @@
     });
     docList.querySelectorAll(".doc-issue").forEach(btn=>{
       btn.addEventListener("click", ()=>{
-        const name = btn.getAttribute("data-issue");
         alert(name + " 발급 안내: 해당 서류는 관공서/공공기관에서 발급 가능합니다. (서비스 연동 예정)");
       });
     });
@@ -176,26 +176,20 @@
   function renderDocListDocs(docs){
     docListDocs.innerHTML = "";
     docCountTagDocs.textContent = "총 서류: " + docs.length;
-    $("#detailContent").classList.add("hidden");
+    detailModal.style.display = "none";
     if(!docs.length){
       docListDocs.innerHTML = "<p class='text-sm text-gray-400'>아직 등록한 서류가 없습니다. '새 서류 등록'으로 서류를 추가하세요.</p>";
       return;
     }
     for(const d of docs){
-      const card = document.createElement("div");
       card.className = "doc-card cond";
-      const head = document.createElement("div");
       head.className = "flex items-center justify-between gap-3";
-      const info = document.createElement("div");
-      const nameEl = document.createElement("div");
       nameEl.className = "doc-name";
       nameEl.textContent = d.name;
-      const issuedEl = document.createElement("div");
       issuedEl.className = "doc-issued";
       issuedEl.textContent = d.issued ? ("발급일: " + d.issued) : "발급일 없음";
       info.appendChild(nameEl);
       info.appendChild(issuedEl);
-      const right = document.createElement("div");
       right.className = "flex items-center gap-2";
       const editBtn = document.createElement("button");
       editBtn.type = "button";
@@ -213,12 +207,10 @@
           renderDocListDocs(readDocs());
         }
       });
-      const delBtn = document.createElement("button");
       delBtn.type = "button";
       delBtn.className = "doc-del";
       delBtn.textContent = "삭제";
       delBtn.addEventListener("click", ()=>{
-        const next = readDocs().filter(x=>x!==d);
         writeDocs(next);
         renderDocListDocs(next);
       });
@@ -232,7 +224,6 @@
 
     // 열람: 카드 클릭 시 오른쪽 미리보기
     docListDocs.querySelectorAll(".doc-card").forEach(card=>{
-      const idx = Array.prototype.indexOf.call(docListDocs.querySelectorAll(".doc-card"), card);
       if(!(idx >= 0)) return;
       const d = docs[idx];
       if(!d) return;
@@ -263,8 +254,8 @@
   function showDocPreview(doc){
     // 상세 카드에 서류 정보 표시
     const now = new Date().toLocaleString("ko-KR");
-    detailContent.classList.remove("hidden");
-    detailContent.innerHTML = `
+    detailModal.style.display = "flex";
+    detailModalContent.innerHTML = `
       <div class="flex justify-between items-start gap-3 mb-3">
         <div>
           <p class="text-sm text-gray-400">선택한 서류</p>
@@ -282,26 +273,21 @@
     `;
 
     document.getElementById("previewEditBtn").onclick = ()=>{
-      const newName = prompt("서류명:", doc.name);
       if(!newName || !newName.trim()) return;
-      const newIssued = prompt("발급일 (선택, YYYY-MM-DD):", doc.issued || "");
-      const docs = readDocs();
-      const idx = docs.indexOf(doc);
       if(idx >= 0){
         docs[idx] = { name: newName.trim(), issued: newIssued && newIssued.trim() || null, regDate: docs[idx].regDate || new Date().toLocaleString("ko-KR"), modDate: now };
         writeDocs(docs);
         renderDocListDocs(docs);
-        $("#detailContent").classList.add("hidden");
+        detailModal.style.display = "none";
       }
     };
     document.getElementById("previewDeleteBtn").onclick = ()=>{
       if(!confirm("'" + doc.name + "'을(를) 삭제하시겠습니까?")) return;
-      const next = readDocs().filter(x=>x!==doc);
       writeDocs(next);
       renderDocListDocs(next);
-      $("#detailContent").classList.add("hidden");
+      detailModal.style.display = "none";
     };
-    $("#previewCloseBtn").onclick = ()=> $("#detailContent").classList.add("hidden");
+    $("#previewCloseBtn").onclick = ()=> detailModal.style.display = "none";
   }
 
   // 대비용: 필요 서류+보유 여부 전용 렌더
@@ -337,15 +323,12 @@
       else if(row.status === "판단불가") cannotDecideCount++;
       else lackingCount++;
 
-      const head = document.createElement("div");
       head.className = "flex justify-between items-start gap-2 mb-2";
 
-      const name = document.createElement("div");
       name.className = "font-medium";
       name.textContent = row.name;
       head.appendChild(name);
 
-      const badge = document.createElement("span");
       badge.className = "text-xs px-2 py-0.5 rounded";
       if(isOwn){
         if(row.status === "충족"){
@@ -437,7 +420,7 @@
     const condInfo = (row.conditional_info || "").trim();
 
     const hasEvidence = evidence.length > 0;
-    const genericDoc = /지원신청|신청서|사업신청서|참가신청서|등록신청서|가입신청서|지급신청서|확인서\s*신청|신고서/i.test(name);
+    const genericDoc = /지원신청|신청서|사업신청서|참가신청서|등록신청서|가입신청서|지급신청서|확인서\\s*신청|신고서/i.test(name);
 
     let lines = [];
     if(genericDoc){
@@ -469,11 +452,16 @@
     return lines.join(" ");
   }
 
+  function closeDetailModal(){
+    if(detailModal) detailModal.style.display = "none";
+    document.removeEventListener("keydown", onEscCloseModal);
+  }
+  function onEscCloseModal(e){
+    if(e.key === "Escape") closeDetailModal();
+  }
   function showContrastDetail(row, isOwn){
-    const d = document.getElementById("detailContent");
-    if(!d) return;
-    d.classList.remove("hidden");
-    d.innerHTML = "";
+    if(!detailModal) return;
+    detailModalContent.innerHTML = "";
     const status = row.status || "";
     const name = (row.name || "").trim();
     const evidence = (row.evidence || "").trim();
@@ -481,13 +469,13 @@
     const condInfo = (row.conditional_info || "").trim();
 
     const hasEvidence = evidence.length > 0;
-    const genericDoc = /지원신청|신청서|사업신청서|참가신청서|등록신청서|가입신청서|지급신청서|확인서\s*신청|신고서/i.test(name);
+    const genericDoc = /지원신청|신청서|사업신청서|참가신청서|등록신청서|가입신청서|지급신청서|확인서\\s*신청|신고서/i.test(name);
     const owned = readDocs() || [];
     const ownMatch = owned.filter(o => normalizeName(o.name) === normalizeName(name));
 
     const parts = [];
 
-    parts.push("<div class='flex justify-between gap-2 items-start'>");
+    parts.push("<div class='flex justify-between items-start gap-2'>");
     parts.push("<div class='font-medium text-gray-900'>" + escapeHtml(name) + "</div>");
 
     const badgeCls = status === "충족" ? "bg-green-100 text-green-700" :
@@ -539,8 +527,11 @@
 
     hideLoading();
     hideLoading();
-    d.innerHTML = parts.join("");
-    d.classList.remove("hidden");
+    detailModalContent.innerHTML = parts.join("");
+    detailModal.style.display = "flex";
+    detailModalCloseBtn.onclick = ()=> closeDetailModal();
+    detailModalBackdrop.onclick = ()=> closeDetailModal();
+    document.addEventListener("keydown", onEscCloseModal);
   }
 
   let currentResult = null;
@@ -549,7 +540,6 @@
     if(!result || !result.rows) return {};
     const m = {};
     for(const r of result.rows){
-      const norm = normalizeName(r.name);
       m[norm] = r.status;
     }
     return m;
@@ -583,6 +573,7 @@
       centerCompare.classList.remove("active");
       centerDocs.classList.remove("active");
       centerIntro.classList.add("active");
+      
     }
   }
 
@@ -667,13 +658,11 @@
     if(s) s.textContent = sub || "";
   }
   function hideLoading(){
-    const ov = document.getElementById("loadingOverlay");
     if(!ov) return;
     ov.classList.add("hidden");
   }
 
   function setRunStatus(msg){
-    const el = $("#runStatus");
     if(!el) return;
     if(msg){
       el.textContent = msg;
@@ -691,10 +680,7 @@
   runBtn.addEventListener("click", ()=>{ runWithText(textEl.value, readDocs()); });
 
   docAddBtnDocs.addEventListener("click", ()=>{
-    const name = prompt("서류명:");
     if(!name || !name.trim()) return;
-    const issued = prompt("발급일 (선택, YYYY-MM-DD):", "");
-    const docs = readDocs();
     docs.push({ name: name.trim(), issued: issued && issued.trim() ? issued.trim() : null });
     writeDocs(docs);
     renderDocListDocs(docs);
@@ -736,7 +722,6 @@
     input.type = "file";
     input.accept = ".pdf,.jpg,.jpeg,.png,.webp,.docx,.pptx,.xlsx";
     input.onchange = ()=>{
-      const files = input.files;
       if(files && files.length){
         uploadFileToParse(files[0]);
       }
