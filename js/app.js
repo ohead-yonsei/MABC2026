@@ -182,6 +182,13 @@
       return;
     }
     for(const d of docs){
+      const card = document.createElement("div");
+      const head = document.createElement("div");
+      const nameEl = document.createElement("div");
+      const issuedEl = document.createElement("div");
+      const info = document.createElement("div");
+      const right = document.createElement("div");
+      const delBtn = document.createElement("button");
       card.className = "doc-card cond";
       head.className = "flex items-center justify-between gap-3";
       nameEl.className = "doc-name";
@@ -211,6 +218,8 @@
       delBtn.className = "doc-del";
       delBtn.textContent = "삭제";
       delBtn.addEventListener("click", ()=>{
+        const docsArr = readDocs();
+        const next = docsArr.filter(x => x !== d);
         writeDocs(next);
         renderDocListDocs(next);
       });
@@ -222,13 +231,7 @@
       docListDocs.appendChild(card);
     }
 
-    // 열람: 카드 클릭 시 오른쪽 미리보기
-    docListDocs.querySelectorAll(".doc-card").forEach(card=>{
-      if(!(idx >= 0)) return;
-      const d = docs[idx];
-      if(!d) return;
-      card.addEventListener("click", ()=> showDocPreview(d));
-    });
+
   }
 
   function showNotice(msg){
@@ -331,12 +334,15 @@
       else if(row.status === "판단불가") cannotDecideCount++;
       else lackingCount++;
 
+      const head = document.createElement("div");
       head.className = "flex justify-between items-start gap-2 mb-2";
 
+      const name = document.createElement("div");
       name.className = "font-medium";
       name.textContent = row.name;
       head.appendChild(name);
 
+      const badge = document.createElement("span");
       badge.className = "text-xs px-2 py-0.5 rounded";
       if(isOwn){
         if(row.status === "충족"){
