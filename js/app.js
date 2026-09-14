@@ -658,11 +658,13 @@
     if(s) s.textContent = sub || "";
   }
   function hideLoading(){
+    const ov = document.getElementById("loadingOverlay");
     if(!ov) return;
     ov.classList.add("hidden");
   }
 
   function setRunStatus(msg){
+    const el = $("#runStatus");
     if(!el) return;
     if(msg){
       el.textContent = msg;
