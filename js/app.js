@@ -562,6 +562,8 @@
     tabIntro.classList.toggle("active", tab === "intro");
     if(tab === "compare"){
       leftPanel.classList.remove("hidden");
+      centerPanel.classList.remove("lg:col-span-2");
+      centerPanel.classList.add("lg:col-span-1");
       centerCompare.classList.add("active");
       centerDocs.classList.remove("active");
       centerIntro.classList.remove("active");
