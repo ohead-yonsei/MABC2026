@@ -12,7 +12,6 @@
 //  요청: multipart/form-data, 필드명 document
 
 const Busboy = require("busboy");
-const { PassThrough } = require("stream");
 
 const ALLOWED_METHODS = new Set(["POST"]);
 const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4MB (Vercel 함수 본문 제한 4.5MB를 고려해 여유)
@@ -113,29 +112,18 @@ async function callDocumentParse(fileBuffer, fileName, fileMime) {
     };
   }
 
-  const form = new PassThrough();
-  const boundary = "----WebKitFormBoundary" + Date.now().toString(36) + Math.random().toString(36).slice(2);
-
-  // multipart/form-data 본문을 직접 조립
-  const header = "--" + boundary + "\r\n" +
-    "Content-Disposition: form-data; name=\"document\"; filename=\"" + escapeHeader(fileName) + "\"\r\n" +
-    "Content-Type: " + (fileMime || "application/pdf") + "\r\n\r\n";
-
-  const footer = "\r\n--" + boundary + "--\r\n";
-
-  form.write(header);
-  form.write(fileBuffer);
-  form.end(footer);
+  const form = new FormData();
+  const blob = new Blob([fileBuffer], { type: fileMime || 'application/pdf' });
+  form.append('document', blob, fileName);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 90000);
 
   try {
     const response = await fetch(DOCUMENT_PARSE_URL, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Authorization": "Bearer " + apiKey,
-        "Content-Type": "multipart/form-data; boundary=" + boundary,
+        'Authorization': 'Bearer ' + apiKey,
       },
       body: form,
       signal: controller.signal,
@@ -184,13 +172,7 @@ async function callDocumentParse(fileBuffer, fileName, fileMime) {
 
 // ---- helpers ----
 
-function escapeHeader(value) {
-  return String(value)
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/\r/g, "\\r")
-    .replace(/\n/g, "\\n");
-}
+
 
 function guessMimeFromName(name) {
   const lower = name.toLowerCase();
