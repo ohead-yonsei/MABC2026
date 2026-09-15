@@ -2,7 +2,7 @@
 // 로직을 개선하거나 단순화하지 않음. 같은 입력에 같은 출력이어야 함.
 
 const RE_BRACKET = /[{(][^)}]*[)}]/g;
-const SUFFIX_PATTERNS = [/사본/g, /1\s*부/g, /등본/g, /제출/g];
+const SUFFIX_PATTERNS = [/사본/g, /1\s*부/g, /제출/g];
 
 function normalizeName(name) {
   let t = name.replace(/\s+/g, "");
@@ -25,6 +25,7 @@ function matchRequirement(req, owned) {
   let anyMatched = false;
   let anyExact = false;
   for (const ownedNorm of ownedNorms) {
+    if (!ownedNorm) continue;
     if (ownedNorm === reqNorm) {
       anyExact = true;
       anyMatched = true;
