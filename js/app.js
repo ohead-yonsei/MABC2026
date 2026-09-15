@@ -612,8 +612,8 @@
       logModalContent.innerHTML = html;
     }
 
-    logModalCloseBtn.onclick = ()=>{ logModal.classList.add("hidden"); };
-    logModalBackdrop.onclick = ()=>{ logModal.classList.add("hidden"); };
+    logModalCloseBtn.onclick = ()=>{ logModal.classList.add("hidden"); logModal.style.display = "none"; };
+    logModalBackdrop.onclick = ()=>{ logModal.classList.add("hidden"); logModal.style.display = "none"; };
   }
 
   logBtn.addEventListener("click", ()=>{
