@@ -612,8 +612,8 @@
       logModalContent.innerHTML = html;
     }
 
-    logModalCloseBtn.onclick = ()=>{ logModal.classList.add("hidden"); logModal.style.display = "none"; };
-    logModalBackdrop.onclick = ()=>{ logModal.classList.add("hidden"); logModal.style.display = "none"; };
+    logModalCloseBtn.onclick = ()=>{ logModal.classList.add("hidden"); };
+    logModalBackdrop.onclick = ()=>{ logModal.classList.add("hidden"); };
   }
 
   logBtn.addEventListener("click", ()=>{
@@ -631,7 +631,6 @@
     if(!result || !result.rows) return {};
     const m = {};
     for(const r of result.rows){
-      const norm = normalizeName(r.name || "");
       m[norm] = r.status;
     }
     return m;
@@ -838,8 +837,8 @@
     input.type = "file";
     input.accept = ".pdf,.jpg,.jpeg,.png,.webp,.docx,.pptx,.xlsx";
     input.onchange = ()=>{
-      if(files && files.length){
-        uploadFileToParse(files[0]);
+      if(input.files && input.files.length){
+        uploadFileToParse(input.files[0]);
       }
     };
     input.click();
