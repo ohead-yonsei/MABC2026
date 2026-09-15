@@ -44,6 +44,11 @@
   const resultAction = $("#resultAction");
   const resultDisclaimer = $("#resultDisclaimer");
   const copyBtn = $("#copyBtn");
+  const logBtn = $("#logBtn");
+  const logModal = $("#logModal");
+  const logModalContent = $("#logModalContent");
+  const logModalCloseBtn = $("#logModalCloseBtn");
+  const logModalBackdrop = $("#logModalBackdrop");
 
   const STORAGE_KEY_DOCS = "mfc_docs_v1";
 
@@ -566,7 +571,6 @@
     }
 
     hideLoading();
-    hideLoading();
     detailModalContent.innerHTML = parts.join("");
     detailModal.style.display = "flex";
     detailModalCloseBtn.onclick = ()=> closeDetailModal();
@@ -576,10 +580,58 @@
 
   let currentResult = null;
 
+  // 로그 보기 함수
+  function showLog(result){
+    if(!logModal) return;
+    logModalContent.innerHTML = "";
+    logModal.classList.remove("hidden");
+    logModal.style.display = "flex";
+
+    const rows = (result && result.rows) ? result.rows : [];
+    const total = rows.length;
+
+    if(total === 0){
+      logModalContent.innerHTML = "<div class='p-4 bg-gray-50 rounded-lg text-gray-600'>추출된 제출 요건이 없습니다.</div>";
+    } else {
+      let html = "<div class='text-xs text-gray-500 mb-3'>아래 정보는 /api/check 응답 기준입니다.</div>";
+      html += "총 " + total + "건\n";
+
+      for(const r of rows){
+        const status = r.status || "";
+        const name = (r.name || "").trim() || "(이름 없음)";
+        const matched = (r.matched_owned || "").trim();
+        const isExact = r.isExactMatch ? "정확" : (matched ? "부분" : "없음");
+
+        html += "<hr>";
+        html += "<div class='font-medium'>" + escapeHtml(name) + "</div>";
+        html += "<div class='text-sm'>상태: " + status + " | 매칭: " + isExact + (matched ? " (" + matched + ")" : "") + "</div>";
+        if(r.evidence) html += "<div class='text-sm'>증거: " + escapeHtml(r.evidence) + "</div>";
+        if(r.format_note) html += "<div class='text-sm'>형식 조건: " + escapeHtml(r.format_note) + "</div>";
+        if(r.conditional_info) html += "<div class='text-sm'>조건부: " + escapeHtml(r.conditional_info) + "</div>";
+      }
+      logModalContent.innerHTML = html;
+    }
+
+    logModalCloseBtn.onclick = ()=>{ logModal.classList.add("hidden"); };
+    logModalBackdrop.onclick = ()=>{ logModal.classList.add("hidden"); };
+  }
+
+  logBtn.addEventListener("click", ()=>{
+    if(currentResult && currentResult.rows && currentResult.rows.length){
+      showLog(currentResult);
+    } else {
+      if(logModal){
+        logModalContent.innerHTML = "<div class='p-4 bg-gray-50 rounded-lg text-gray-600'>현재 대조 결과가 없습니다. '대조하기'를 눌러 주세요.</div>";
+        logModal.classList.remove("hidden");
+      }
+    }
+  });
+
   function buildStatusesFromResult(result){
     if(!result || !result.rows) return {};
     const m = {};
     for(const r of result.rows){
+      const norm = normalizeName(r.name || "");
       m[norm] = r.status;
     }
     return m;
