@@ -11,7 +11,7 @@
 //  인증: Authorization: Bearer {UPSTAGE_API_KEY}
 //  요청: multipart/form-data, 필드명 document
 
-const Busboy = require("busboy");
+const busboyMod = require("busboy");
 
 const ALLOWED_METHODS = new Set(["POST"]);
 const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4MB (Vercel 함수 본문 제한 4.5MB를 고려해 여유)
@@ -33,7 +33,7 @@ module.exports = async function (req, res) {
   let fileMime = null;
   let parseError = null;
 
-  const busboy = new Busboy({ headers: req.headers });
+  const busboy = busboyMod({ headers: req.headers });
 
   await new Promise((resolve, reject) => {
     busboy.on("file", (fieldname, file, info) => {
@@ -103,72 +103,71 @@ module.exports = async function (req, res) {
 // ---- Document Parse 호출 ----
 
 async function callDocumentParse(fileBuffer, fileName, fileMime) {
-  const apiKey = process.env.UPSTAGE_API_KEY;
-  if (!apiKey) {
-    return {
-      ok: false,
-      status: 500,
-      detail: "UPSTAGE_API_KEY가 등록되지 않았습니다.",
-    };
-  }
-
-  const form = new FormData();
-  const blob = new Blob([fileBuffer], { type: fileMime || 'application/pdf' });
-  form.append('document', blob, fileName);
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 90000);
-
   try {
-    const response = await fetch(DOCUMENT_PARSE_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + apiKey,
-      },
-      body: form,
-      signal: controller.signal,
-    });
+    console.log('parseRuntime: node=' + process.version + ' hasFormData=' + (typeof FormData) + ' hasBlob=' + (typeof Blob));
 
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      return {
-        ok: false,
-        status: response.status,
-        detail: "Document Parse HTTP " + response.status + (text ? " — " + text.slice(0, 500) : ""),
-      };
+    const apiKey = process.env.UPSTAGE_API_KEY;
+    if (!apiKey) {
+      return { ok: false, status: 500, detail: "UPSTAGE_API_KEY가 등록되지 않았습니다." };
     }
 
-    const result = await response.json().catch(() => null);
-    if (!result || typeof result !== "object") {
-      return {
-        ok: false,
-        status: 502,
-        detail: "Document Parse 응답이 예상 형식이 아닙니다.",
-      };
+    if (typeof FormData !== 'function' && typeof FormData !== 'object') {
+      return { ok: false, status: 500, detail: "서버 환경에서 FormData를 사용할 수 없습니다." };
     }
 
-    // 응답은 보통 markdown 또는 html을 포함
-    const text = result.markdown || result.html || result.text || "";
-    const format = result.markdown ? "markdown" : result.html ? "html" : "unknown";
+    const form = new FormData();
+    const blob = new Blob([fileBuffer], { type: fileMime || 'application/pdf' });
+    form.append('document', blob, fileName);
 
-    if (!text) {
-      return {
-        ok: false,
-        status: 502,
-        detail: "Document Parse 응답에 추출 텍스트가 없습니다.",
-      };
-    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90000);
 
-    return { ok: true, text, format };
-  } catch (err) {
-    if (err && err.name === "AbortError") {
-      return { ok: false, status: 504, detail: "Document Parse 호출이 시간 초과되었습니다." };
+    try {
+      const response = await fetch(DOCUMENT_PARSE_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + apiKey,
+        },
+        body: form,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        return {
+          ok: false,
+          status: response.status,
+          detail: "Document Parse HTTP " + response.status + (text ? " — " + text.slice(0, 500) : ''),
+        };
+      }
+
+      const result = await response.json().catch(() => null);
+      if (!result || typeof result !== 'object') {
+        return { ok: false, status: 502, detail: "Document Parse 응답이 예상 형식이 아닙니다." };
+      }
+
+      const text = result.markdown || result.html || result.text || '';
+      const format = result.markdown ? 'markdown' : result.html ? 'html' : 'unknown';
+
+      if (!text) {
+        return { ok: false, status: 502, detail: "Document Parse 응답에 추출 텍스트가 없습니다." };
+      }
+
+      return { ok: true, text, format };
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        return { ok: false, status: 504, detail: "Document Parse 호출이 시간 초과되었습니다." };
+      }
+      return { ok: false, status: 500, detail: "Document Parse 호출 중 오류가 발생했습니다." };
     }
-    return { ok: false, status: 500, detail: "Document Parse 호출 중 오류가 발생했습니다." };
+  } catch (outerErr) {
+    console.log('parseRuntime: node=' + process.version + ' hasFormData=' + (typeof FormData) + ' hasBlob=' + (typeof Blob) + ' error=' + (outerErr && outerErr.message ? outerErr.message : (outerErr && outerErr.name ? outerErr.name : 'unknown')));
+    return { ok: false, status: 500, detail: "문서 파싱 처리 중 오류가 발생했습니다." };
   }
 }
+
 
 // ---- helpers ----
 
