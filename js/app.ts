@@ -318,10 +318,9 @@
 
     const rows = result.rows;
     list.innerHTML = "";
-    let haveCount = 0;
-    let formatCheckCount = 0;
-    let cannotDecideCount = 0;
-    let lackingCount = 0;
+    let readyCount = 0;
+    let needCount = 0;
+    let checkCount = 0;
 
     for(const row of rows){
       const r = document.createElement("div");
@@ -329,10 +328,17 @@
       const needNorm = normalizeName(row.name || "");
       const isOwn = ownedNorms.has(needNorm);
 
-      if(row.status === "충족") haveCount++;
-      else if(row.status === "형식확인") formatCheckCount++;
-      else if(row.status === "판단불가") cannotDecideCount++;
-      else lackingCount++;
+      let category;
+      if(row.status === "충족"){
+        category = "ready";
+        readyCount++;
+      } else if(row.status === "미충족"){
+        category = "need";
+        needCount++;
+      } else {
+        category = "check";
+        checkCount++;
+      }
 
       const head = document.createElement("div");
       head.className = "flex justify-between items-start gap-2 mb-2";
@@ -343,34 +349,32 @@
       head.appendChild(name);
 
       const badge = document.createElement("span");
-      badge.className = "text-xs px-2 py-0.5 rounded";
-      if(isOwn){
-        if(row.status === "충족"){
-          badge.classList.add("bg-green-100", "text-green-700");
-          badge.textContent = "가지고 있음(충족)";
-        } else if(row.status === "형식확인"){
-          badge.classList.add("bg-yellow-100", "text-yellow-700");
-          badge.textContent = "가지고 있음(형식 확인 필요)";
-        } else if(row.status === "판단불가"){
-          badge.classList.add("bg-gray-100", "text-gray-600");
-          badge.textContent = "가지고 있음(판단 불가)";
-        } else {
-          badge.classList.add("bg-red-100", "text-red-700");
-          badge.textContent = "가지고 있음(보유 확인 필요)";
-        }
+      badge.className = "text-xs px-2 py-0.5 rounded font-medium";
+      if(category === "ready"){
+        badge.classList.add("bg-green-100", "text-green-700");
+        badge.textContent = "준비 완료";
+      } else if(category === "need"){
+        badge.classList.add("bg-red-100", "text-red-700");
+        badge.textContent = "준비 필요";
       } else {
-        if(row.status === "판단불가"){
-          badge.classList.add("bg-gray-100", "text-gray-600");
-          badge.textContent = "판단 불가";
-        } else if(row.status === "형식확인"){
-          badge.classList.add("bg-yellow-100", "text-yellow-700");
-          badge.textContent = "필요함(형식 확인 필요)";
-        } else {
-          badge.classList.add("bg-red-100", "text-red-700");
-          badge.textContent = "필요함";
-        }
+        badge.classList.add("bg-yellow-100", "text-yellow-700");
+        badge.textContent = "확인 필요";
       }
       head.appendChild(badge);
+
+      if(isOwn){
+        const ownMark = document.createElement("div");
+        ownMark.className = "text-xs text-gray-500 mt-1 flex items-center gap-1.5";
+        ownMark.innerHTML = "<span class='inline-block w-1.5 h-1.5 rounded-full bg-blue-500'></span> 내 서류함에 등록됨";
+        r.appendChild(ownMark);
+        if(row.ownedIssued){
+          const issuedMark = document.createElement("div");
+          issuedMark.className = "text-xs text-gray-400 mt-0.5";
+          issuedMark.textContent = "보유 발급일: " + row.ownedIssued;
+          r.appendChild(issuedMark);
+        }
+      }
+
       r.appendChild(head);
 
       const evidence = document.createElement("div");
@@ -378,36 +382,50 @@
       evidence.textContent = (row.evidence || "").trim() || "공고 원문 근거 없음";
       r.appendChild(evidence);
 
-      const sub = document.createElement("div");
-      sub.className = "text-sm text-gray-500 mt-1";
-      if(row.status === "형식확인"){
-        const fmt = (row.format_note || "").trim();
-        sub.textContent = fmt ? fmt + " 조건을 만족하는지 확인하셨나요?" : "보유 서류와 동일 서류인지 확인하셨나요?";
-      } else if(row.status === "판단불가"){
-        const condInfo = (row.conditional_info || "해당 조건에 해당하는지").trim();
-        const condNote = (row.format_note || "").trim();
-        const condParts = []
-          .concat(condInfo ? [condInfo] : [])
-          .concat(condNote ? [condNote] : [])
-          .filter(Boolean);
-        if(condParts.length){
-          const text = condParts.join(" / ");
-          if(/인지|하는지|경우|하는 경우|에 해당하는 경우|에 한|할경우|하는경우/.test(text)){
-            sub.textContent = /인지$/.test(text) || /하는지$/.test(text)
-              ? text + " 확인이 필요합니다"
-              : /경우$/.test(text) || /하는 경우$/.test(text) || /에 해당하는 경우$/.test(text)
-                ? text + "에 해당하시나요?"
-                : text + "인지 확인이 필요합니다";
-          } else {
-            sub.textContent = text + "에 해당하시나요?";
-          }
-        } else {
-          sub.textContent = "조건 해당 여부를 확인할 수 없습니다.";
-        }
+      const desc = document.createElement("div");
+      desc.className = "text-sm text-gray-700 mt-1.5";
+      if(category === "ready"){
+        desc.textContent = "추가로 확인할 조건이 없어요.";
+      } else if(category === "need"){
+        desc.textContent = "필요한 서류를 준비하거나 다시 발급받아야 해요.";
       } else {
-        sub.textContent = "";
+        const parts = [];
+        const fmt = (row.format_note || "").trim();
+        const condInfo = (row.conditional_info || "").trim();
+        if(fmt) parts.push(fmt + " 조건을 확인하세요.");
+        if(condInfo) parts.push(condInfo + "에 해당하는지 확인하세요.");
+        if(!parts.length){
+          if(row.status === "형식확인") parts.push("보유 서류와 공고 요건 서류의 동일 여부/형식을 확인하세요.");
+          else parts.push("조건 해당 여부를 확인할 수 없어요.");
+        }
+        desc.textContent = parts.join(" ");
       }
-      r.appendChild(sub);
+      r.appendChild(desc);
+
+      if(category === "check" && isOwn){
+        const issueBtn = document.createElement("button");
+        issueBtn.type = "button";
+        issueBtn.className = "text-xs text-blue-600 hover:text-blue-800 mt-1.5 underline font-medium";
+        issueBtn.textContent = "[ 발급일 입력하기 ]";
+        issueBtn.addEventListener("click", (e)=>{
+          e.stopPropagation();
+          const issued = prompt("발급일 (YYYY-MM-DD):", row.ownedIssued || "");
+          if(issued && issued.trim()){
+            const docs = readDocs();
+            const norm = normalizeName(row.name || "");
+            for(const d of docs){
+              if(normalizeName(d.name) === norm){
+                d.issued = issued.trim();
+                break;
+              }
+            }
+            writeDocs(docs);
+            renderDocListDocs(readDocs());
+            if(currentResult) renderContrastResult(currentResult);
+          }
+        });
+        r.appendChild(issueBtn);
+      }
 
       r.onclick = () => showContrastDetail(row, isOwn);
       r.style.cursor = "pointer";
@@ -416,9 +434,9 @@
       list.appendChild(r);
     }
 
-    const total = haveCount + formatCheckCount + cannotDecideCount + lackingCount;
+    const total = readyCount + needCount + checkCount;
     $("#contrastSummary").textContent =
-      "필수·구비 서류 " + total + "건 중 보유 " + haveCount + "건 / 형식확인 " + formatCheckCount + "건 / 판단불가 " + cannotDecideCount + "건 / 미충족 " + lackingCount + "건";
+      "준비 완료 " + readyCount + "건 · 준비 필요 " + needCount + "건 · 확인 필요 " + checkCount + "건 — 준비할 서류와 확인할 내용을 살펴보세요.";
     $("#docCountTag").textContent = "내 서류: " + ownedNames.length;
   }
 
@@ -492,18 +510,26 @@
     parts.push("<div class='flex justify-between items-start gap-2'>");
     parts.push("<div class='font-medium text-gray-900'>" + escapeHtml(name) + "</div>");
 
-    const badgeCls = isOwn
-      ? (status === "충족" ? "bg-green-100 text-green-700" :
-         status === "형식확인" ? "bg-yellow-100 text-yellow-700" :
-         status === "판단불가" ? "bg-gray-100 text-gray-600" :
-         "bg-red-100 text-red-700")
-      : (status === "판단불가" ? "bg-gray-100 text-gray-600" :
-         status === "형식확인" ? "bg-yellow-100 text-yellow-700" :
-         "bg-red-100 text-red-700");
-    const badgeText = isOwn
-      ? (status === "충족" ? "가지고 있음(충족)" : status === "형식확인" ? "가지고 있음(형식 확인 필요)" : status === "판단불가" ? "가지고 있음(판단 불가)" : "가지고 있음(보유 확인 필요)")
-      : (status === "판단불가" ? "판단 불가" : status === "형식확인" ? "필요함(형식 확인 필요)" : "필요함");
-    parts.push("<span class='text-xs px-2 py-0.5 rounded " + badgeCls + "'>" + escapeHtml(badgeText) + "</span>");
+    let catBadgeCls, catBadgeText;
+    if(status === "충족"){
+      catBadgeCls = "bg-green-100 text-green-700";
+      catBadgeText = "준비 완료";
+    } else if(status === "미충족"){
+      catBadgeCls = "bg-red-100 text-red-700";
+      catBadgeText = "준비 필요";
+    } else {
+      catBadgeCls = "bg-yellow-100 text-yellow-700";
+      catBadgeText = "확인 필요";
+    }
+
+    parts.push("<span class='text-xs px-2 py-0.5 rounded " + catBadgeCls + "'>" + escapeHtml(catBadgeText) + "</span>");
+
+    if(isOwn){
+      parts.push("<div class='mt-1 text-xs text-gray-500 flex items-center gap-1.5'><span class='inline-block w-1.5 h-1.5 rounded-full bg-blue-500'></span> 내 서류함에 등록됨</div>");
+      if(ownMatch.length){
+        parts.push("<div class='mt-0.5 text-xs text-gray-400'>보유 발급일: " + escapeHtml((ownMatch[0].issued || ownMatch[0].issuedAt || "")) + "</div>");
+      }
+    }
     parts.push("</div>");
 
     if(ownMatch.length){
@@ -531,6 +557,8 @@
         .filter(Boolean);
       parts.push(escapeHtml(checkParts.join(" / ") || "요건 확인 필요"));
       parts.push("</div>");
+    } else if(status === "형식확인" && !fmt && !condInfo){
+      parts.push("<div class='mt-2 text-sm text-gray-600'>보유 서류와 공고 요건 서류의 동일 여부/형식을 확인하세요.</div>");
     }
 
     if(!hasEvidence){

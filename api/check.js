@@ -126,6 +126,7 @@ function matchRows(reqs, ownedOriginal) {
       format_note: (r.format_note || ""),
       status,
       matched_owned,
+      isExactMatch: !!match.exact,
     });
   }
   return rows;
