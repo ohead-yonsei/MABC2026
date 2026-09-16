@@ -148,11 +148,21 @@ async function callDocumentParse(fileBuffer, fileName, fileMime) {
         return { ok: false, status: 502, detail: "Document Parse 응답이 예상 형식이 아닙니다." };
       }
 
-      const text = result.markdown || result.html || result.text || '';
-      const format = result.markdown ? 'markdown' : result.html ? 'html' : 'unknown';
+      // Document Parse 응답에서 텍스트를 찾는다. 필드명은 API 버전/파라미터에 따라 달라질 수 있다.
+      const text = result.markdown || result.html || result.text
+        || result.content || result.text_content || result.result_text || ''
+      || (typeof result === 'string' ? result : '');
+
+      let format = 'unknown';
+      if (result.markdown) format = 'markdown';
+      else if (result.html) format = 'html';
+      else if (result.text) format = 'text';
+      else if (result.content && typeof result.content === 'string') format = 'content';
 
       if (!text) {
-        return { ok: false, status: 502, detail: "Document Parse 응답에 추출 텍스트가 없습니다." };
+        const keys = Array.isArray(result) ? '[]' : Object.keys(result).join(', ');
+        return { ok: false, status: 502,
+          detail: "Document Parse 응답에 추출 텍스트가 없습니다. 응답 keys: " + keys };
       }
 
       return { ok: true, text, format };
