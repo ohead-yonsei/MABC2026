@@ -594,7 +594,7 @@
       logModalContent.innerHTML = "<div class='p-4 bg-gray-50 rounded-lg text-gray-600'>추출된 제출 요건이 없습니다.</div>";
     } else {
       let html = "<div class='text-xs text-gray-500 mb-3'>아래 정보는 /api/check 응답 기준입니다.</div>";
-      html += "총 " + total + "건\n";
+      html += "총 " + total + "건<br>";
 
       for(const r of rows){
         const status = r.status || "";
@@ -612,8 +612,8 @@
       logModalContent.innerHTML = html;
     }
 
-    logModalCloseBtn.onclick = ()=>{ logModal.classList.add("hidden"); };
-    logModalBackdrop.onclick = ()=>{ logModal.classList.add("hidden"); };
+    logModalCloseBtn.onclick = ()=>{ logModal.classList.add("hidden"); logModal.style.display = "none"; };
+    logModalBackdrop.onclick = ()=>{ logModal.classList.add("hidden"); logModal.style.display = "none"; };
   }
 
   logBtn.addEventListener("click", ()=>{
@@ -623,6 +623,9 @@
       if(logModal){
         logModalContent.innerHTML = "<div class='p-4 bg-gray-50 rounded-lg text-gray-600'>현재 대조 결과가 없습니다. '대조하기'를 눌러 주세요.</div>";
         logModal.classList.remove("hidden");
+        logModal.style.display = "flex";
+        logModalCloseBtn.onclick = ()=>{ logModal.classList.add("hidden"); logModal.style.display = "none"; };
+        logModalBackdrop.onclick = ()=>{ logModal.classList.add("hidden"); logModal.style.display = "none"; };
       }
     }
   });
@@ -865,9 +868,27 @@
         showNotice(data.detail || "문서 파싱 결과를 읽을 수 없습니다.");
         return;
       }
-      textEl.value = data.text;
-      $("#contrastSummary").textContent = "문서에서 " + (data.text || "").length + "자 추출됨. 결과를 확인하려면 '대조하기'를 누르세요.";
-      showNotice("문서 파싱 완료: " + (data.text || "").length + "자 추출됨");
+      // server가 text를 문자열로 내려주는 것이 원칙이나, 입력 방어: 객체면 toString, HTML이면 태그 제거
+      let parsedText = data.text;
+      if (parsedText && typeof parsedText === 'object' && !(parsedText instanceof Date)) {
+        parsedText = parsedText.markdown || parsedText.html || parsedText.text || parsedText.content || String(parsedText);
+      }
+      if (typeof parsedText !== 'string') parsedText = String(parsedText || '');
+      // HTML로 내려온 경우에도 textarea에 태그 없는 텍스트가 들어가도록 간단히 정리
+      if (parsedText.trim().startsWith('<')) {
+        try {
+          parsedText = parsedText
+            .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, '\n')
+            .replace(/\n[\s\r\n]+/g, '\n')
+            .replace(/[\r\n]+/g, '\n')
+            .trim();
+        } catch (e) {}
+      }
+      textEl.value = parsedText;
+      $("#contrastSummary").textContent = "문서에서 " + parsedText.length + "자 추출됨. 결과를 확인하려면 '대조하기'를 누르세요.";
+      showNotice("문서 파싱 완료: " + parsedText.length + "자 추출됨");
     }catch(err){
       showNotice("문서 파싱 요청 중 오류가 발생했습니다.");
     }finally{

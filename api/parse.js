@@ -149,15 +149,44 @@ async function callDocumentParse(fileBuffer, fileName, fileMime) {
       }
 
       // Document Parse 응답에서 텍스트를 찾는다. 필드명은 API 버전/파라미터에 따라 달라질 수 있다.
-      const text = result.markdown || result.html || result.text
+      let raw = result.markdown || result.html || result.text
         || result.content || result.text_content || result.result_text || ''
       || (typeof result === 'string' ? result : '');
 
+      // result.text가 객체({html, markdown, text})로 올 수 있으므로, 그 경우 내부 텍스트를 우선 사용한다.
+      if (typeof raw !== 'string' && typeof raw === 'object' && raw !== null) {
+        raw = raw.markdown || raw.html || raw.text || raw.content || raw.text_content || raw.result_text || '';
+      }
+
+      // 문자열화: HTML이면 태그 벗겨 plain text로 만든다. Solar 대조/textarea 모두에 쓰기 위함이다.
+      let text;
       let format = 'unknown';
-      if (result.markdown) format = 'markdown';
-      else if (result.html) format = 'html';
-      else if (result.text) format = 'text';
-      else if (result.content && typeof result.content === 'string') format = 'content';
+      if (typeof raw === 'string') {
+        text = raw;
+        if (raw.trim().startsWith('<')) {
+          format = 'html';
+          // 간단한 HTML 태그 제거: <script>/<style> 블록은 제거, 나머지 태그는 공백으로 치환
+          try {
+            const tmp = raw
+              .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+              .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+              .replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, '')
+              .replace(/<[^>]+>/g, '\n')
+              .replace(/\n[\s\r\n]+/g, '\n')
+              .replace(/[\r\n]+/g, '\n')
+              .trim();
+            text = tmp || raw;
+          } catch (e) {
+            // 변환 실패해도 원본 유지
+          }
+        } else if (raw.trim()) {
+          format = 'text';
+        }
+      } else {
+        const keys = Array.isArray(raw) ? '[]' : Object.keys(raw).join(', ');
+        return { ok: false, status: 502,
+          detail: "Document Parse 응답에 추출 텍스트가 없습니다. 응답 keys: " + keys };
+      }
 
       if (!text) {
         const keys = Array.isArray(result) ? '[]' : Object.keys(result).join(', ');
